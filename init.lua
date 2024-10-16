@@ -170,7 +170,6 @@ return {
 				return
 			end
 			if not valid_extension() then
-				-- ya.manager_emit("enter", {})
 				smart_enter()
 				return
 			end
@@ -189,7 +188,7 @@ return {
 			set_state(tmp_file_name, "cwd", current_dir())
 			set_state(tmp_file_name, "tmp", tmp_file_path)
 			ya.manager_emit("cd", { tmp_file_path })
-			ya.manager_emit("enter", {})
+			smart_enter()
 		end
 
 		if action == "unmount" then
