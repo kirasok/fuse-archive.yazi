@@ -39,7 +39,13 @@ That mean, if you have a file like this, just use the `plugin fuse-archive --arg
 
 2. This plugin only supports Linux, and requires having
    [fuse-archive](https://github.com/google/fuse-archive) installed. It should be
-   available in most Linux distributions.
+   available in most Linux distributions. But this fork requires you to install from source.
+
+```sh
+git clone https://github.com/google/fuse-archive
+cd "fuse-archive"
+make install
+```
 
 ## Installation
 
@@ -86,14 +92,27 @@ prepend_keymap = [
 ]
 ```
 
+> BREAKING CHANGE from this fork: `plugin fuse-archive --args=unmount` key in keymap.toml should changed to `plugin fuse-archive --args=leave`
+> to make multiple deep mount work. the
+> `unmount` still there if you want to unmount after leave the folder
+> (this won't let you copy/move files/folders to other place without create another
+> tab). But the downside of `leave` command is that the zip file won't unmount
+> itself after exit yazi. Maybe use another shellscript with `trap EXIT` `uuidgen` and `umount` could solve this problem. I'll take a look at it later
+> In case you run into any problems and need to unmount something manually, or
+> delete any temporary directories, the location of the mounts is one of the
+> following three in order of preference:
+
 When the current file is not a supported archive type, the plugin simply calls
 _enter_, and when there is nothing to unmount, it calls _leave_, so it works
 transparently.
 
-In case you run into any problems and need to unmount something manually, or
-delete any temporary directories, the location of the mounts is one of the
-following three in order of preference:
+BREAKING CHANGE: `plugin fuse-archive --args=unmount` key in keymap.toml should changed to `plugin fuse-archive --args=leave`
+to make multiple deep mount work (e.g. mount zip in in a zip). the
+`unmount` still there if you want to unmount after leave the folder
+(this won't let you copy/move files/folders to other place without create another
+tab). But the downside of `leave` command is that the zip file won't unmount
+itself after exit yazi. Maybe use another shellscript with `trap EXIT` `uuidgen` and `umount` could solve this problem. I'll take a look at it later
 
-1. `$XDG_STATE_HOME/yazi/fuse-archive/...`
-2. `$HOME/.local/state/yazi/fuse-archive/...`
+1. ~~`$XDG_STATE_HOME/yazi/fuse-archive/...`~~
+2. ~~`$HOME/.local/state/yazi/fuse-archive/...`~~
 3. `/tmp/yazi/fuse-archive/...`
