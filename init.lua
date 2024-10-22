@@ -182,7 +182,6 @@ local function run_command(cmd, args, _stdin)
 end
 
 local is_mounted = function(dir_path)
-	ya.err(dir_path)
 	local cmd_err_code, res = run_command("mountpoint", { "-q", "--", ya.quote(dir_path) })
 	if cmd_err_code or res == nil or res.status.code ~= 0 then
 		-- case error, or mountpoint command not found
@@ -235,10 +234,15 @@ local valid_extension = ya.sync(function()
 end)
 
 ---Get the fuse mount point
----@return string
-local function fuse_dir()
-	local state_dir = "/tmp"
-	return state_dir .. "/yazi/fuse-archive"
+---@return string|nil
+local fuse_dir = function()
+	local fuse_mount_point = "/tmp" .. "/yazi/fuse-archive"
+	local res, exit, exit_code = os.execute("mkdir -p " .. ya.quote(fuse_mount_point))
+	if exit_code ~= 0 then
+		error("Cannot create fuse-archive mount point %s", fuse_mount_point)
+		return
+	end
+	return fuse_mount_point
 end
 
 --- return a string array with unique value
@@ -260,9 +264,13 @@ end
 
 ---
 ---@param file string file path
----@return string
+---@return string|nil
 local function get_mount_path(file)
-	local tmp_path = get_state("global", "fuse_dir") .. "/" .. file
+	local fuse_mount_point = get_state("global", "fuse_dir")
+	if not fuse_mount_point then
+		return
+	end
+	local tmp_path = fuse_mount_point .. "/" .. file
 	return tmp_path
 end
 
@@ -308,7 +316,6 @@ local function mount_fuse(opts)
 	local payload_error_notify = {}
 
 	if is_mounted(opts.fuse_mount_point) then
-		ya.err("already mounted, skipping")
 		return true
 	end
 	local passpharase_stdin = Command.PIPED
