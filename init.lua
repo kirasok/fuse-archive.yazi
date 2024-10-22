@@ -1,3 +1,4 @@
+local shell = os.getenv("SHELL") or ""
 ---@enum FUSE_ARCHIVE_RETURN_CODE
 local FUSE_ARCHIVE_RETURN_CODE = {
 	SUCCESS = 0, -- Success.
@@ -114,6 +115,11 @@ local get_state = ya.sync(function(state, archive, key)
 	end
 end)
 
+local function path_quote(path)
+	local result = "'" .. string.gsub(path, "'", "'\\''") .. "'"
+	return result
+end
+
 local is_mount_point = ya.sync(function(state)
 	local dir = cx.active.current.cwd:name()
 	for archive, _ in pairs(state) do
@@ -182,7 +188,7 @@ local function run_command(cmd, args, _stdin)
 end
 
 local is_mounted = function(dir_path)
-	local cmd_err_code, res = run_command("mountpoint", { "-q", "--", ya.quote(dir_path) })
+	local cmd_err_code, res = run_command(shell, { "-c", "mountpoint -q " .. path_quote(dir_path) })
 	if cmd_err_code or res == nil or res.status.code ~= 0 then
 		-- case error, or mountpoint command not found
 		return false
@@ -239,7 +245,7 @@ local fuse_dir = function()
 	local fuse_mount_point = "/tmp" .. "/yazi/fuse-archive"
 	local _, _, exit_code = os.execute("mkdir -p " .. ya.quote(fuse_mount_point))
 	if exit_code ~= 0 then
-		error("Cannot create fuse-archive mount point %s", fuse_mount_point)
+		error("Cannot create mount point %s", fuse_mount_point)
 		return
 	end
 	return fuse_mount_point
@@ -324,15 +330,22 @@ local function mount_fuse(opts)
 	-- show notify + exit after too many attempts to mount
 
 	if passphrase then
-		passpharase_stdin =
-			Command("echo"):arg(ya.quote(passphrase)):stderr(Command.PIPED):stdout(Command.PIPED):spawn():take_stdout()
+		passpharase_stdin = Command("echo")
+			:arg(path_quote(passphrase))
+			:stderr(Command.PIPED)
+			:stdout(Command.PIPED)
+			:spawn()
+			:take_stdout()
 	end
-	local res, _ = Command("fuse-archive")
+	local res, _ = Command(shell)
 		:args({
-			"-o",
-			table.concat(mount_opts, ","),
-			ya.quote(archive_path),
-			ya.quote(fuse_mount_point),
+			"-c",
+			"fuse-archive -o "
+				.. table.concat(mount_opts, ",")
+				.. " "
+				.. path_quote(archive_path)
+				.. " "
+				.. path_quote(fuse_mount_point),
 		})
 		:stderr(Command.PIPED)
 		:stdin(passpharase_stdin)
@@ -407,14 +420,14 @@ end
 ---e.g. /tmp/yazi/fuse-archive/test.zip.tmp.11675995
 ---@param path string
 ---@return string|nil
-local function get_file_name_with_inode(path)
-	local cmd_err_code, res = run_command("ls", { "-i", path })
+local function tmp_file_name(path)
+	local cmd_err_code, res = run_command(shell, { "-c", "xxh128sum -q " .. path_quote("./" .. path) })
 	if cmd_err_code or res == nil or res.status.code ~= 0 then
-		error("Cannot get inode of file %s", path)
+		error("Cannot create unique path of file %s", path)
 		return nil
 	end
-	local inode = res.stdout:match("^(%d+)")
-	return path .. ".tmp." .. tostring(inode)
+	local hashed_name = res.stdout:match("^(%S+)")
+	return path .. ".tmp." .. hashed_name
 end
 
 local function setup(_, opts)
@@ -443,7 +456,7 @@ return {
 				enter()
 				return
 			end
-			local tmp_file_name = get_file_name_with_inode(file)
+			local tmp_file_name = tmp_file_name(file)
 			local tmp_file_path = get_mount_path(tmp_file_name)
 
 			if tmp_file_path then
@@ -465,7 +478,7 @@ return {
 				return
 			end
 			local file = current_dir_name()
-			local tmp_file = get_state(file, "tmp")
+			-- local tmp_file = get_state(file, "tmp")
 			ya.manager_emit("cd", { get_state(file, "cwd") })
 			return
 		elseif action == "unmount" then
@@ -477,7 +490,7 @@ return {
 			local tmp_file = get_state(file, "tmp")
 			ya.manager_emit("cd", { get_state(file, "cwd") })
 
-			local cmd_err_code, res = run_command("umount", { ya.quote(tmp_file) })
+			local cmd_err_code, res = run_command(shell, { "-c", "umount " .. path_quote(tmp_file) })
 			if cmd_err_code or res and not res.status.success then
 				error("Unable to unmount %s", tmp_file)
 			end

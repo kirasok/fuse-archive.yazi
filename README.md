@@ -54,8 +54,7 @@ password, it'll still asking for the first time you open.
    [yazi](https://github.com/sxyazi/yazi).
 
 2. This plugin only supports Linux, and requires having
-   [fuse-archive](https://github.com/google/fuse-archive) installed. It should be
-   available in most Linux distributions. But this fork requires you to install from source.
+   [fuse-archive](https://github.com/google/fuse-archive) and [xxHash](https://github.com/Cyan4973/xxHash) installed. This fork requires you to build and install fuse-archive with latest source from github (because the latest release is too old, 2020).
 
 ```sh
 git clone https://github.com/google/fuse-archive
