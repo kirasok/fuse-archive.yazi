@@ -1,5 +1,17 @@
 # fuse-archive.yazi
 
+<!--toc:start-->
+
+- [fuse-archive.yazi](#fuse-archiveyazi)
+  - [What news with this fork](#what-news-with-this-fork)
+    - [Keep the file mount](#keep-the-file-mount)
+    - [Support multiple deep mount](#support-multiple-deep-mount)
+  - [Requirements](#requirements)
+  - [Installation](#installation)
+    - [Options](#options)
+  - [Usage](#usage)
+  <!--toc:end-->
+
 [fuse-archive.yazi](https://github.com/dawsers/fuse-archive.yazi)
 uses [fuse-archive](https://github.com/google/fuse-archive) to
 transparently mount and unmount archives in read-only mode, allowing you to
@@ -20,13 +32,17 @@ mounting the following file extensions: `.zip`, `.gz`, `.bz2`, `.tar`, `.tgz`,
 
 ## What news with this fork
 
-##### Keep the file mount with `plugin fuse-archive --args=leave`
+### Keep the file mount
 
-So you can copy and paste the content to other place without open a new tab
+By using `plugin fuse-archive --args=leave`. So you can copy and paste
+the content to other place without open a new tab
 
-##### Support multiple deep mount
+### Support multiple deep mount
 
-That mean, if you have a file like this, just use the `plugin fuse-archive --args=mount` to go deeper inside and `plugin fuse-archive --args=leave` to go back. Even if the file inside have password, it'll still asking for the first time you open.
+That mean, if you have a file like below,
+just use the `plugin fuse-archive --args=mount` to go deeper inside
+and `plugin fuse-archive --args=leave` to go back. Even if the file inside have
+password, it'll still asking for the first time you open.
 
 - Origin file.zip
   - Child_1.zip
@@ -92,13 +108,14 @@ prepend_keymap = [
 ]
 ```
 
-> BREAKING CHANGE from this fork: `plugin fuse-archive --args=unmount` key in keymap.toml should changed to `plugin fuse-archive --args=leave`
+> BREAKING CHANGE from this fork: `plugin fuse-archive --args=unmount` in
+> keymap.toml should changed to `plugin fuse-archive --args=leave`
 > to make multiple deep mount work. the
 > `unmount` still there if you want to unmount after leave the folder
 > (this won't let you copy/move files/folders to other place without create another
 > tab). But the downside of `leave` command is that the zip file won't unmount
-> itself after exit yazi. Maybe use another shellscript with `trap EXIT` `uuidgen` and `umount` could solve this problem. I'll take a look at it later
-
+> itself after exit yazi. Maybe use another shellscript with `trap EXIT` `uuidgen`
+> and `umount` could solve this problem. I'll take a look at it later
 
 When the current file is not a supported archive type, the plugin simply calls
 _enter_, and when there is nothing to unmount, it calls _leave_, so it works

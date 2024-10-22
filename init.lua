@@ -237,7 +237,7 @@ end)
 ---@return string|nil
 local fuse_dir = function()
 	local fuse_mount_point = "/tmp" .. "/yazi/fuse-archive"
-	local res, exit, exit_code = os.execute("mkdir -p " .. ya.quote(fuse_mount_point))
+	local _, _, exit_code = os.execute("mkdir -p " .. ya.quote(fuse_mount_point))
 	if exit_code ~= 0 then
 		error("Cannot create fuse-archive mount point %s", fuse_mount_point)
 		return
