@@ -98,20 +98,15 @@ prepend_keymap = [
 > (this won't let you copy/move files/folders to other place without create another
 > tab). But the downside of `leave` command is that the zip file won't unmount
 > itself after exit yazi. Maybe use another shellscript with `trap EXIT` `uuidgen` and `umount` could solve this problem. I'll take a look at it later
-> In case you run into any problems and need to unmount something manually, or
-> delete any temporary directories, the location of the mounts is one of the
-> following three in order of preference:
+
 
 When the current file is not a supported archive type, the plugin simply calls
 _enter_, and when there is nothing to unmount, it calls _leave_, so it works
 transparently.
 
-BREAKING CHANGE: `plugin fuse-archive --args=unmount` key in keymap.toml should changed to `plugin fuse-archive --args=leave`
-to make multiple deep mount work (e.g. mount zip in in a zip). the
-`unmount` still there if you want to unmount after leave the folder
-(this won't let you copy/move files/folders to other place without create another
-tab). But the downside of `leave` command is that the zip file won't unmount
-itself after exit yazi. Maybe use another shellscript with `trap EXIT` `uuidgen` and `umount` could solve this problem. I'll take a look at it later
+In case you run into any problems and need to unmount something manually, or
+delete any temporary directories, the location of the mounts is one of the
+following three in order of preference:
 
 1. ~~`$XDG_STATE_HOME/yazi/fuse-archive/...`~~
 2. ~~`$HOME/.local/state/yazi/fuse-archive/...`~~
