@@ -54,7 +54,9 @@ password, it'll still asking for the first time you open.
    [yazi](https://github.com/sxyazi/yazi).
 
 2. This plugin only supports Linux, and requires having
-   [fuse-archive](https://github.com/google/fuse-archive) and [xxHash](https://github.com/Cyan4973/xxHash) installed. This fork requires you to build and install fuse-archive with latest source from github (because the latest release is too old, 2020).
+   [fuse-archive](https://github.com/google/fuse-archive) and [xxHash](https://github.com/Cyan4973/xxHash)
+   installed. This fork requires you to build and install fuse-archive with latest
+   source from github (because the latest release is too old, 2020).
 
 ```sh
 git clone https://github.com/google/fuse-archive
@@ -73,6 +75,14 @@ Modify your `~/.config/yazi/init.lua` to include:
 ```lua
 require("fuse-archive"):setup()
 ```
+
+Install this if you want yazi un-mount all archive files after `exit` the `last`
+yazi instance:
+
+- If you use `fish` shell, then copy `yazi_fuse.fish` file to `~/.config/fish/functions`.
+  e.g. `~/.config/fish/functions/yazi_fuse.fish`
+
+- If you use `bash` shell, then copy the content of `bash.sh` file to this file `~/.bashrc`
 
 ### Options
 
