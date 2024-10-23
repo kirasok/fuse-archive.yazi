@@ -452,8 +452,8 @@ return {
 				enter()
 				return
 			end
-			local tmp_file_name = tmp_file_name(file)
-			local tmp_file_path = get_mount_path(tmp_file_name)
+			local tmp_file = tmp_file_name(file)
+			local tmp_file_path = get_mount_path(tmp_file)
 
 			if tmp_file_path then
 				local success = mount_fuse({
@@ -461,10 +461,9 @@ return {
 					fuse_mount_point = tmp_file_path,
 				})
 				if success then
-					set_state(tmp_file_name, "cwd", current_dir())
-					set_state(tmp_file_name, "tmp", tmp_file_path)
+					set_state(tmp_file, "cwd", current_dir())
+					set_state(tmp_file, "tmp", tmp_file_path)
 					ya.manager_emit("cd", { tmp_file_path })
-					ya.manager_emit("enter", {})
 				end
 			end
 			-- leave without unmount
