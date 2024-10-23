@@ -79,8 +79,8 @@ require("fuse-archive"):setup()
 Install this if you want yazi un-mount all archive files after `exit` the `last`
 yazi instance:
 
-- If you use `fish` shell, then copy `yazi_fuse.fish` file to `~/.config/fish/functions`.
-  e.g. `~/.config/fish/functions/yazi_fuse.fish`
+- If you use `fish` shell, then copy `yazi_fuse.fish` file to `~/.config/fish/conf.d`.
+  e.g. `~/.config/fish/conf.d/yazi_fuse.fish`
 
 - If you use `bash` shell, then copy the content of `bash.sh` file to this file `~/.bashrc`
 

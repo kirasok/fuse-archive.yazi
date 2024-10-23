@@ -7,7 +7,7 @@ umount_yazi_fuse() {
     fuse_archive_mnt_points=$(findmnt --output TARGET --noheadings --list /tmp/yazi/fuse-archive/*)
     echo "$fuse_archive_mnt_points" | while read -r mnt_point; do
       # force unmount
-      fusermount -f "$mnt_point"
+      fusermount -u "$mnt_point"
     done
   fi
 }
