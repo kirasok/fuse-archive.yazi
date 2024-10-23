@@ -330,12 +330,8 @@ local function mount_fuse(opts)
 	-- show notify + exit after too many attempts to mount
 
 	if passphrase then
-		passpharase_stdin = Command("echo")
-			:arg(path_quote(passphrase))
-			:stderr(Command.PIPED)
-			:stdout(Command.PIPED)
-			:spawn()
-			:take_stdout()
+		passpharase_stdin =
+			Command("echo"):arg(passphrase):stderr(Command.PIPED):stdout(Command.PIPED):spawn():take_stdout()
 	end
 	local res, _ = Command(shell)
 		:args({
