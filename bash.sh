@@ -5,10 +5,10 @@ umount_yazi_fuse() {
   if [ -z "$(pgrep yazi)" ]; then
     # get mount points
     fuse_archive_mnt_points=$(findmnt --output TARGET --noheadings --list | grep "^/tmp/yazi/fuse-archive" | sort -r)
-    echo -n "$fuse_archive_mnt_points" | while read -r mnt_point; do
-      # force unmount
+    # Loop through each mount point and force unmount
+    while IFS= read -r mnt_point; do
       fusermount -u "$mnt_point"
-    done
+    done <<<"$fuse_archive_mnt_points"
   fi
 }
 
