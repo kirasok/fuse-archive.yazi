@@ -174,13 +174,13 @@ local function run_command(cmd, args, _stdin)
 		Command(cmd):args(args):cwd(cwd):stdin(stdin):stdout(Command.PIPED):stderr(Command.INHERIT):spawn()
 
 	if not child then
-		error("Spawn " .. cmd .. " failed with error: %s", cmd_err)
+		error("Failed to start `%s` failed with error: %s", cmd, cmd_err)
 		return cmd_err, nil
 	end
 
 	local output, out_err = child:wait_with_output()
 	if not output then
-		error("Cannot read " .. cmd .. " output, error code %s", out_err)
+		error("Cannot read `%s` output, error: %s", cmd, out_err)
 		return out_err, nil
 	else
 		return nil, output
