@@ -57,9 +57,9 @@ local Command = _G.Command
 ---@field stdin fun(self: Command, cfg: Command.PIPED | Command.NULL | Command.INHERIT| STD_STREAM): self
 ---@field stdout fun(self: Command, cfg: Command.PIPED | Command.NULL | Command.INHERIT| STD_STREAM): self
 ---@field stderr fun(self: Command, cfg: Command.PIPED | Command.NULL | Command.INHERIT| STD_STREAM): self
----@field spawn fun(self: Command): Child|nil, integer
----@field output fun(self: Command): Output|nil, integer
----@field status fun(self: Command): Status|nil, integer
+---@field spawn fun(self: Command): Child|nil, unknown
+---@field output fun(self: Command): Output|nil, unknown
+---@field status fun(self: Command): Status|nil, unknown
 
 ---@alias STD_STREAM unknown
 
@@ -67,19 +67,19 @@ local Command = _G.Command
 ---@field read fun(self: Child, len: string): string, 1|0
 ---@field read_line fun(self: Child): string, 1|0
 ---@field read_line_with fun(self: Child, opts: {timeout: integer}): string, 1|2|3
----@field wait fun(self: Child): Status|nil, integer
----@field wait_with_output fun(self: Child): Output|nil, integer
----@field start_kill fun(self: Child): boolean, integer
+---@field wait fun(self: Child): Status|nil, unknown
+---@field wait_with_output fun(self: Child): Output|nil, unknown
+---@field start_kill fun(self: Child): boolean, unknown
 --- stdin(Command.PIPED) is set
----@field take_stdin fun(self: Child): STD_STREAM|nil, integer
+---@field take_stdin fun(self: Child): STD_STREAM|nil, unknown
 --- stdin(Command.PIPED) is set
----@field take_stdout fun(self: Child): STD_STREAM|nil, integer
+---@field take_stdout fun(self: Child): STD_STREAM|nil, unknown
 --- stdin(Command.PIPED) is set
----@field take_stderr fun(self: Child): STD_STREAM|nil, integer
+---@field take_stderr fun(self: Child): STD_STREAM|nil, unknown
 --- stdin(Command.PIPED) is set
 --- take_stdin() has never been called
----@field write_all fun(self: Child, src: string): STD_STREAM|nil, integer
----@field flush fun(self: Child): STD_STREAM|nil, integer
+---@field write_all fun(self: Child, src: string): STD_STREAM|nil, unknown
+---@field flush fun(self: Child): STD_STREAM|nil, unknown
 
 ---@class (exact) Output The Output of the command if successful; otherwise, nil
 ---@field status Status The Status of the child process
@@ -174,7 +174,7 @@ local function run_command(cmd, args, _stdin)
 		Command(cmd):args(args):cwd(cwd):stdin(stdin):stdout(Command.PIPED):stderr(Command.INHERIT):spawn()
 
 	if not child then
-		error("Spawn " .. cmd .. " failed with error code %s", cmd_err)
+		error("Spawn " .. cmd .. " failed with error: %s", cmd_err)
 		return cmd_err, nil
 	end
 
