@@ -32,16 +32,19 @@ mounting the following file extensions: `.zip`, `.gz`, `.bz2`, `.tar`, `.tgz`,
 
 ## What news with this fork
 
+> [!IMPORTANT]
+> Minimum version: yazi v25.2.7
+
 ### Keep the file mount
 
-By using `plugin fuse-archive --args=leave`. So you can copy and paste
+By using `plugin fuse-archive -- leave`. So you can copy and paste
 the content to other place without open a new tab
 
 ### Support multiple deep mount
 
 That mean, if you have a file like below,
-just use the `plugin fuse-archive --args=mount` to go deeper inside
-and `plugin fuse-archive --args=leave` to go back. Even if the file inside have
+just use the `plugin fuse-archive -- mount` to go deeper inside
+and `plugin fuse-archive -- leave` to go back. Even if the file inside have
 password, it'll still asking for the first time you open.
 
 - Origin file.zip
@@ -50,7 +53,7 @@ password, it'll still asking for the first time you open.
 
 ## Requirements
 
-1. A relatively modern (>= 0.3) version of
+1. A relatively modern (>= 25.2.7) version of
    [yazi](https://github.com/sxyazi/yazi).
 
 2. This plugin only supports Linux, and requires having
@@ -112,13 +115,13 @@ Add this to your `~/.config/yazi/keymap.toml`:
 ```toml
 [manager]
 prepend_keymap = [
-    { on   = [ "<Right>" ], run = "plugin fuse-archive --args=mount", desc = "Enter or Mount selected archive" },
-    { on   = [ "<Left>" ], run = "plugin fuse-archive --args=unmount", desc = "Leave or Unmount selected archive" },
+    { on   = [ "<Right>" ], run = "plugin fuse-archive -- mount", desc = "Enter or Mount selected archive" },
+    { on   = [ "<Left>" ], run = "plugin fuse-archive -- unmount", desc = "Leave or Unmount selected archive" },
 ]
 ```
 
-> BREAKING CHANGE from this fork: `plugin fuse-archive --args=unmount` in
-> keymap.toml should changed to `plugin fuse-archive --args=leave`
+> BREAKING CHANGE from this fork: `plugin fuse-archive -- unmount` in
+> keymap.toml should changed to `plugin fuse-archive -- leave`
 > to make multiple deep mount work. the
 > `unmount` still there if you want to unmount after leave the folder
 > (this won't let you copy/move files/folders to other place without create another
