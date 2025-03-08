@@ -134,11 +134,7 @@ end)
 
 local current_file = ya.sync(function()
 	local h = cx.active.current.hovered
-	if h then
-		return h.name
-	else
-		return nil
-	end
+	return h and h.name
 end)
 
 local current_dir = ya.sync(function()
@@ -431,11 +427,7 @@ end
 local function setup(_, opts)
 	local fuse = fuse_dir()
 	set_state("global", "fuse_dir", fuse)
-	if opts and opts.smart_enter then
-		set_state("global", "smart_enter", true)
-	else
-		set_state("global", "smart_enter", false)
-	end
+	set_state("global", "smart_enter", opts and opts.smart_enter)
 end
 
 return {
@@ -455,6 +447,9 @@ return {
 				return
 			end
 			local tmp_file = tmp_file_name(file)
+			if not tmp_file then
+				return
+			end
 			local tmp_file_path = get_mount_path(tmp_file)
 
 			if tmp_file_path then
