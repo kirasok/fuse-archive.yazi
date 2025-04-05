@@ -1,4 +1,6 @@
 --- @since 25.2.7
+--- NOTE: REMOVE :parent() :name() :is_hovered() :ext() after upgrade to v25.4.4
+--- https://github.com/sxyazi/yazi/pull/2572
 
 local shell = os.getenv("SHELL") or ""
 ---@enum FUSE_ARCHIVE_RETURN_CODE
@@ -123,7 +125,8 @@ local function path_quote(path)
 end
 
 local is_mount_point = ya.sync(function(state)
-	local dir = cx.active.current.cwd:name()
+	local dir = type(cx.active.current.cwd.name) == "function" and cx.active.current.cwd:name()
+		or cx.active.current.cwd.name
 	for archive, _ in pairs(state) do
 		if archive == dir then
 			return true
@@ -142,7 +145,7 @@ local current_dir = ya.sync(function()
 end)
 
 local current_dir_name = ya.sync(function()
-	return cx.active.current.cwd:name()
+	return type(cx.active.current.cwd.name) == "function" and cx.active.current.cwd:name() or cx.active.current.cwd.name
 end)
 
 local enter = ya.sync(function()
@@ -225,7 +228,7 @@ local valid_extension = ya.sync(function()
 			"xpi",
 			"cab",
 		}
-		local file_extention = h.url.ext(h.url)
+		local file_extention = type(h.url.ext) == "function" and h.url:ext() or h.url.ext
 		for _, ext in ipairs(valid_extensions) do
 			if ext == file_extention then
 				return true
