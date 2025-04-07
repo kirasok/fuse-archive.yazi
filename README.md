@@ -79,13 +79,13 @@ Modify your `~/.config/yazi/init.lua` to include:
 require("fuse-archive"):setup()
 ```
 
-Install this if you want yazi un-mount all archive files after `exit` the `last`
+Install this shell script if you want yazi auto un-mount all mounted archives after `exit` the `last`
 yazi instance:
 
-- If you use `fish` shell, then copy `yazi_fuse.fish` file to `~/.config/fish/conf.d`.
+- For `fish` shell: copy `yazi_fuse.fish` file to `~/.config/fish/conf.d`.
   e.g. `~/.config/fish/conf.d/yazi_fuse.fish`
 
-- If you use `bash` shell, then copy the content of `bash.sh` file to this file `~/.bashrc`
+- For`bash` shell: copy the content of `bash.sh` file to this file `~/.bashrc`. 
 
 ### Options
 
@@ -116,18 +116,20 @@ Add this to your `~/.config/yazi/keymap.toml`:
 [manager]
 prepend_keymap = [
     { on   = [ "<Right>" ], run = "plugin fuse-archive -- mount", desc = "Enter or Mount selected archive" },
-    { on   = [ "<Left>" ], run = "plugin fuse-archive -- unmount", desc = "Leave or Unmount selected archive" },
+    { on   = [ "<Left>" ], run = "plugin fuse-archive -- leave", desc = "Leave selected archive without unmount it" },
+    { on   = [ "l" ], run = "plugin fuse-archive -- mount", desc = "Enter or Mount selected archive" },
+    { on   = [ "h" ], run = "plugin fuse-archive -- leave", desc = "Leave selected archive without unmount it" },
 ]
 ```
 
+> [!IMPORTANT]
 > BREAKING CHANGE from this fork: `plugin fuse-archive -- unmount` in
 > keymap.toml should changed to `plugin fuse-archive -- leave`
 > to make multiple deep mount work. the
 > `unmount` still there if you want to unmount after leave the folder
 > (this won't let you copy/move files/folders to other place without create another
 > tab). But the downside of `leave` command is that the zip file won't unmount
-> itself after exit yazi. Maybe use another shellscript with `trap EXIT` `uuidgen`
-> and `umount` could solve this problem. I'll take a look at it later
+> itself after exit yazi, unless you use the fish or bash script which is mentioned in the #installation section.
 
 When the current file is not a supported archive type, the plugin simply calls
 _enter_, and when there is nothing to unmount, it calls _leave_, so it works
