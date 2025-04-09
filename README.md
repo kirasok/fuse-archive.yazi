@@ -71,6 +71,12 @@ it will still prompt you to enter a password. You only need to enter the passwor
 
 - For Ubuntu:
 
+  Use `libfuse-dev` instead of `libfuse3-dev` if you are using Ubuntu 22.04 or later.
+
+  - libfuse-dev: This is for FUSE 2.x, the older version.
+  - libfuse3-dev: This is for FUSE 3.x, the newer and actively developed version.
+    which is recommended by fuse-archive's author.
+
   ```sh
   sudo apt install git cmake g++ pkg-config libfuse3-dev libarchive-dev libboost-all-dev xxhash fuse3
   git clone https://github.com/google/fuse-archive
