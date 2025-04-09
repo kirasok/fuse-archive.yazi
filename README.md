@@ -103,10 +103,12 @@ require("fuse-archive"):setup()
 Install this shell script if you want yazi auto un-mount all mounted archives after `exit` the `last`
 yazi instance:
 
-- For `fish` shell: copy `yazi_fuse.fish` file to `~/.config/fish/conf.d`.
+Both yazi_fuse.fish and bash.sh are in the `yazi/plugins/fuse-archive.yazi/assets/` directory.
+
+- For `fish` shell: copy [assets/yazi_fuse.fish](./assets/yazi_fuse.fish) file to `~/.config/fish/conf.d/`.
   e.g. `~/.config/fish/conf.d/yazi_fuse.fish`
 
-- For`bash` shell: copy the content of `bash.sh` file to this file `~/.bashrc`.
+- For `bash` shell: copy the content of [assets/bash.sh](./assets/bash.sh) file to `~/.bashrc` file.
 
 ### Options
 

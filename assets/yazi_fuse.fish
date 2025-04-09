@@ -11,4 +11,4 @@ function umount_yazi_fuse
 end
 
 # trigger function on exit
-trap umount_yazi_fuse EXIT
+trap umount_yazi_fuse EXIT HUP INT QUIT ABRT TERM
