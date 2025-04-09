@@ -57,7 +57,7 @@ password, it'll still asking for the first time you open.
    [yazi](https://github.com/sxyazi/yazi).
 
 2. This plugin only supports Linux, and requires having
-   [fuse-archive](https://github.com/google/fuse-archive) and [xxHash](https://github.com/Cyan4973/xxHash)
+   [fuse-archive](https://github.com/google/fuse-archive), [xxHash](https://github.com/Cyan4973/xxHash) and `fuse3`
    installed. This fork requires you to build and install fuse-archive with latest
    source from github (because the latest release is too old, 2020).
 
@@ -65,21 +65,26 @@ password, it'll still asking for the first time you open.
 
 ### Dependencies:
 
-- For Ubuntu: 
-    ```sh
-    sudo apt install git cmake g++ pkg-config libfuse3-dev libarchive-dev libboost-all-dev xxhash
-    git clone https://github.com/google/fuse-archive
-    cd "fuse-archive"
-    sudo make install
-    ```
+- For Ubuntu:
+
+  ```sh
+  sudo apt install git cmake g++ pkg-config libfuse3-dev libarchive-dev libboost-all-dev xxhash fuse3
+  git clone https://github.com/google/fuse-archive
+  cd "fuse-archive"
+  sudo make install
+  ```
 
 - For Arch based:
-    ```sh
-    yay -S xxhash
-    git clone https://github.com/google/fuse-archive
-    cd "fuse-archive"
-    sudo make install
-    ```
+
+  ```sh
+  yay -S xxhash fuse3 fuse-archive
+  # or: paru -S xxhash fuse3 fuse-archive
+
+  # Or: install fuse-archive from source:
+  # git clone https://github.com/google/fuse-archive
+  # cd "fuse-archive"
+  # sudo make install
+  ```
 
 - For other distros, it's better to use ChatGPT for dependencies. Prompt: `install fuse-archive YOUR_DISTRO_NAME`.
 
@@ -101,7 +106,7 @@ yazi instance:
 - For `fish` shell: copy `yazi_fuse.fish` file to `~/.config/fish/conf.d`.
   e.g. `~/.config/fish/conf.d/yazi_fuse.fish`
 
-- For`bash` shell: copy the content of `bash.sh` file to this file `~/.bashrc`. 
+- For`bash` shell: copy the content of `bash.sh` file to this file `~/.bashrc`.
 
 ### Options
 
