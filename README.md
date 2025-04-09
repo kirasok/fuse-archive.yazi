@@ -71,7 +71,7 @@ it will still prompt you to enter a password. You only need to enter the passwor
 
 - For Ubuntu:
 
-  Use `libfuse-dev` instead of `libfuse3-dev` if you are using Ubuntu 22.04 or later.
+  Use `libfuse3-dev` instead of `libfuse-dev` if you are using Ubuntu 22.04 or later.
 
   - libfuse-dev: This is for FUSE 2.x, the older version.
   - libfuse3-dev: This is for FUSE 3.x, the newer and actively developed version.
