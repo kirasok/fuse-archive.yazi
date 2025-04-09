@@ -61,13 +61,29 @@ password, it'll still asking for the first time you open.
    installed. This fork requires you to build and install fuse-archive with latest
    source from github (because the latest release is too old, 2020).
 
-```sh
-git clone https://github.com/google/fuse-archive
-cd "fuse-archive"
-make install
-```
-
 ## Installation
+
+### Dependencies:
+
+- For Ubuntu: 
+    ```sh
+    sudo apt install git cmake g++ pkg-config libfuse3-dev libarchive-dev libboost-all-dev xxhash
+    git clone https://github.com/google/fuse-archive
+    cd "fuse-archive"
+    sudo make install
+    ```
+
+- For Arch based:
+    ```sh
+    yay -S xxhash
+    git clone https://github.com/google/fuse-archive
+    cd "fuse-archive"
+    sudo make install
+    ```
+
+- For other distros, it's better to use ChatGPT for dependencies. Prompt: `install fuse-archive YOUR_DISTRO_NAME`.
+
+### fuse-archive.yazi:
 
 ```sh
 ya pack -a boydaihungst/fuse-archive
