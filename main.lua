@@ -42,6 +42,72 @@ local YA_INPUT_EVENT = {
 	VALUE_CHANGED = 3,
 }
 
+local VALID_EXTENSIONS = {
+	["7z"] = true,
+	["7zip"] = true,
+	a = true,
+	ar = true,
+	cab = true,
+	cpio = true,
+	iso = true,
+	iso9660 = true,
+	jar = true,
+	mtree = true,
+	rar = true,
+	rpm = true,
+	tar = true,
+	warc = true,
+	xar = true,
+	zip = true,
+	zipx = true,
+	crx = true,
+	odf = true,
+	odg = true,
+	odp = true,
+	ods = true,
+	odt = true,
+	docx = true,
+	ppsx = true,
+	pptx = true,
+	xlsx = true,
+	tb2 = true,
+	tbz = true,
+	tbz2 = true,
+	tz2 = true,
+	tgz = true,
+	tlz4 = true,
+	tlz = true,
+	tlzma = true,
+	txz = true,
+	tz = true,
+	taz = true,
+	tzst = true,
+	br = true,
+	brotli = true,
+	bz2 = true,
+	bzip2 = true,
+	grz = true,
+	grzip = true,
+	gz = true,
+	gzip = true,
+	lha = true,
+	lrz = true,
+	lrzip = true,
+	lz4 = true,
+	lz = true,
+	lzip = true,
+	lzma = true,
+	lzo = true,
+	lzop = true,
+	xz = true,
+	z = true,
+	zst = true,
+	zstd = true,
+	b64 = true,
+	base64 = true,
+	uu = true,
+}
+
 ---@enum Command.PIPED
 ---@enum Command.NULL
 ---@enum Command.INHERIT
@@ -120,7 +186,7 @@ local get_state = ya.sync(function(state, archive, key)
 end)
 
 local function path_quote(path)
-	local result = "'" .. string.gsub(path, "'", "'\\''") .. "'"
+	local result = "'" .. string.gsub(tostring(path), "'", "'\\''") .. "'"
 	return result
 end
 
@@ -137,7 +203,7 @@ end)
 
 local current_file = ya.sync(function()
 	local h = cx.active.current.hovered
-	return h and h.name
+	return h and h.url
 end)
 
 local current_dir = ya.sync(function()
@@ -197,48 +263,18 @@ local is_mounted = function(dir_path)
 	return res and res.status.success
 end
 
-local valid_extension = ya.sync(function()
-	local h = cx.active.current.hovered
-	if h then
-		if h.cha.is_dir then
+local valid_extension = function(url)
+	local cha, _ = fs.cha(url)
+	if cha then
+		if cha.is_dir then
 			return false
 		end
-		local valid_extensions = {
-			"zip",
-			"gz",
-			"bz2",
-			"tar",
-			"tgz",
-			"tbz2",
-			"txz",
-			"xz",
-			"tzs",
-			"zst",
-			"iso",
-			"rar",
-			"7z",
-			"cpio",
-			"lz",
-			"lzma",
-			"shar",
-			"a",
-			"ar",
-			"apk",
-			"jar",
-			"xpi",
-			"cab",
-		}
-		local file_extention = type(h.url.ext) == "function" and h.url:ext() or h.url.ext
-		for _, ext in ipairs(valid_extensions) do
-			if ext == file_extention then
-				return true
-			end
-		end
-		return false
+		local file_extention = type(url.ext) == "function" and url:ext() or url.ext
+		return VALID_EXTENSIONS[file_extention]
 	else
 		return false
 	end
-end)
+end
 
 ---Get the fuse mount point
 ---@return string|nil
@@ -270,15 +306,14 @@ function tbl_unique_strings(tbl)
 end
 
 ---
----@param file string file path
----@return string|nil
-local function get_mount_path(file)
+---@param tmp_file_name string tmp file name
+---@return Url|nil
+local function get_mount_url(tmp_file_name)
 	local fuse_mount_point = get_state("global", "fuse_dir")
 	if not fuse_mount_point then
 		return
 	end
-	local tmp_path = fuse_mount_point .. "/" .. file
-	return tmp_path
+	return Url(fuse_mount_point):join(tmp_file_name)
 end
 
 ---Show password input dialog
@@ -310,7 +345,7 @@ local function show_ask_pw_dialog()
 end
 
 ---mount fuse
----@param opts {archive_path: string, fuse_mount_point: string, mount_opts: string[], passphrase?: string, max_retry?: integer, retries?: integer}
+---@param opts {archive_path: Url, fuse_mount_point: Url, mount_opts: string[], passphrase?: string, max_retry?: integer, retries?: integer}
 ---@return boolean
 local function mount_fuse(opts)
 	local archive_path = opts.archive_path
@@ -325,28 +360,22 @@ local function mount_fuse(opts)
 	if is_mounted(opts.fuse_mount_point) then
 		return true
 	end
-	local passpharase_stdin = Command.PIPED
 	mount_opts = tbl_unique_strings({ "auto_unmount", table.unpack(mount_opts or {}) })
 
-	-- show notify + exit after too many attempts to mount
-
-	if passphrase then
-		passpharase_stdin =
-			Command("echo"):arg(passphrase):stderr(Command.PIPED):stdout(Command.PIPED):spawn():take_stdout()
-	end
 	local res, _ = Command(shell)
 		:args({
 			"-c",
-			"fuse-archive -o "
+			(passphrase and "printf '%s\n' " .. path_quote(passphrase) .. " | " or "")
+				.. " fuse-archive -o "
 				.. table.concat(mount_opts, ",")
 				.. " "
 				.. path_quote(archive_path)
 				.. " "
 				.. path_quote(fuse_mount_point),
 		})
+		-- :stdin(passpharase_stdin)
 		:stderr(Command.PIPED)
-		:stdin(passpharase_stdin)
-		:stdout(Command.NULL)
+		:stdout(Command.PIPED)
 		:output()
 
 	local fuse_mount_res_code
@@ -415,16 +444,17 @@ end
 
 ---Mount path using inode (unique for each files)
 ---e.g. /tmp/yazi/fuse-archive/test.zip.tmp.11675995
----@param path string
+---@param file_url string
 ---@return string|nil
-local function tmp_file_name(path)
-	local cmd_err_code, res = run_command(shell, { "-c", "xxh128sum -q " .. path_quote("./" .. path) })
+local function tmp_file_name(file_url)
+	local fname = file_url.name
+	local cmd_err_code, res = run_command(shell, { "-c", "xxh128sum -q " .. path_quote(file_url) })
 	if cmd_err_code or res == nil or res.status.code ~= 0 then
-		error("Cannot create unique path of file %s", path)
+		error("Cannot create unique path of file %s", fname)
 		return nil
 	end
 	local hashed_name = res.stdout:match("^(%S+)")
-	return path .. ".tmp." .. hashed_name
+	return fname .. ".tmp." .. hashed_name
 end
 
 local function setup(_, opts)
@@ -441,29 +471,29 @@ return {
 		end
 
 		if action == "mount" then
-			local file = current_file()
-			if file == nil then
+			local file_url = current_file()
+			if file_url == nil then
 				return
 			end
-			if not valid_extension() then
+			if not valid_extension(file_url) then
 				enter()
 				return
 			end
-			local tmp_file = tmp_file_name(file)
-			if not tmp_file then
+			local tmp_fname = tmp_file_name(file_url)
+			if not tmp_fname then
 				return
 			end
-			local tmp_file_path = get_mount_path(tmp_file)
+			local tmp_file_url = get_mount_url(tmp_fname)
 
-			if tmp_file_path then
+			if tmp_file_url then
 				local success = mount_fuse({
-					archive_path = "./" .. file,
-					fuse_mount_point = tmp_file_path,
+					archive_path = file_url,
+					fuse_mount_point = tmp_file_url,
 				})
 				if success then
-					set_state(tmp_file, "cwd", current_dir())
-					set_state(tmp_file, "tmp", tmp_file_path)
-					ya.manager_emit("cd", { tmp_file_path })
+					set_state(tmp_fname, "cwd", current_dir())
+					set_state(tmp_fname, "tmp", tostring(tmp_file_url))
+					ya.manager_emit("cd", { tostring(tmp_file_url) })
 				end
 			end
 			-- leave without unmount
