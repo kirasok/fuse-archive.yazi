@@ -8,9 +8,13 @@
     - [Support multiple deep mount](#support-multiple-deep-mount)
   - [Requirements](#requirements)
   - [Installation](#installation)
+    - [Dependencies:](#dependencies)
+    - [fuse-archive.yazi:](#fuse-archiveyazi)
     - [Options](#options)
   - [Usage](#usage)
   <!--toc:end-->
+
+<!--toc:start-->
 
 [fuse-archive.yazi](https://github.com/boydaihungst/fuse-archive.yazi)
 uses [fuse-archive](https://github.com/google/fuse-archive) to
@@ -25,10 +29,7 @@ than [fuse-archive](https://github.com/google/fuse-archive).
 It also supports very few file types compared to this plugin, and you need to
 mount and unmount the archives manually.
 
-[fuse-archive.yazi](https://github.com/boydaihungst/fuse-archive.yazi) supports
-mounting the following file extensions: `.zip`, `.gz`, `.bz2`, `.tar`, `.tgz`,
-`.tbz2`, `.txz`, `.xz`, `.tzs`, `.zst`, `.iso`, `.rar`, `.7z`, `.cpio`, `.lz`,
-`.lzma`, `.shar`, `.a`, `.ar`, `.apk`, `.jar`, `.xpi`, `.cab`.
+[fuse-archive.yazi](https://github.com/boydaihungst/fuse-archive.yazi) supports mounting the following file extensions: [SUPPORTED ARCHIVE FORMATS](https://github.com/google/fuse-archive?tab=readme-ov-file#archive-formats)
 
 ## What news with this fork
 
@@ -44,12 +45,15 @@ the content to other place without open a new tab
 
 That mean, if you have a file like below,
 just use the `plugin fuse-archive -- mount` to go deeper inside
-and `plugin fuse-archive -- leave` to go back. Even if the file inside have
-password, it'll still asking for the first time you open.
+and `plugin fuse-archive -- leave` to go back. Even if the files inside are password-protected,
+it will still prompt you to enter a password. You only need to enter the password once for each file.
 
 - Origin file.zip
   - Child_1.zip
     - Grandchild_1.zip
+  - Child_2.zip (with password)
+    - Grandchild_2.zip (with another password)
+      - GranGrandchild_3.zip (with another password)
 
 ## Requirements
 
