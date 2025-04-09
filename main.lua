@@ -326,7 +326,7 @@ local function mount_fuse(opts)
 		return true
 	end
 	local passpharase_stdin = Command.PIPED
-	mount_opts = tbl_unique_strings({ "auto_unmount", "use_ino", "readdir_ino", table.unpack(mount_opts or {}) })
+	mount_opts = tbl_unique_strings({ "auto_unmount", table.unpack(mount_opts or {}) })
 
 	-- show notify + exit after too many attempts to mount
 
