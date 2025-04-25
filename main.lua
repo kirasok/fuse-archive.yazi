@@ -319,12 +319,12 @@ end
 ---Show password input dialog
 ---@return boolean cancelled, string password
 local function show_ask_pw_dialog()
-	---TODO: update this with input password (*******)
 	local passphrase = ""
 	local cancelled = false
 	-- Asking user to input the password
 	local input_pw = ya.input({
 		title = "Enter password to unlock:",
+		obscure = true,
 		position = { "center", x = 0, y = 0, w = 50, h = 3 },
 		realtime = true,
 	})
