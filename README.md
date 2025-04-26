@@ -34,7 +34,8 @@ mount and unmount the archives manually.
 ## What news with this fork
 
 > [!IMPORTANT]
-> Minimum version: yazi v25.2.7
+> Minimum version: yazi v25.2.7.
+> 
 > Password-protected RAR file is not supported yet!
 
 ### Keep the file mount
