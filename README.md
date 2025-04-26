@@ -35,6 +35,7 @@ mount and unmount the archives manually.
 
 > [!IMPORTANT]
 > Minimum version: yazi v25.2.7
+> Password-protected RAR file is not supported yet!
 
 ### Keep the file mount
 
@@ -88,6 +89,7 @@ it will still prompt you to enter a password. You only need to enter the passwor
 
   ```sh
   yay -S xxhash fuse3 fuse-archive
+
   # or: paru -S xxhash fuse3 fuse-archive
 
   # Or: install fuse-archive from source:
