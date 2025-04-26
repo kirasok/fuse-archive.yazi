@@ -291,7 +291,7 @@ end
 --- return a string array with unique value
 ---@param tbl string[]
 ---@return string[] table with only unique strings
-function tbl_unique_strings(tbl)
+local function tbl_unique_strings(tbl)
 	local unique_table = {}
 	local seen = {}
 
@@ -426,6 +426,13 @@ local function mount_fuse(opts)
 	--show retry notification
 	if retries >= max_retry or not ignore_global_error_notify then
 		if FUSE_ARCHIVE_MOUNT_ERROR_MSG[fuse_mount_res_code] then
+			if fuse_mount_res_code == FUSE_ARCHIVE_RETURN_CODE.ARCHIVE_READ_PERMISSION_INVALID then
+				local archive_ext = type(archive_path.ext) == "function" and archive_path:ext() or archive_path.ext
+				if archive_ext == "rar" then
+					error("Password-protected RAR file is not supported yet!")
+					return false
+				end
+			end
 			error(FUSE_ARCHIVE_MOUNT_ERROR_MSG[fuse_mount_res_code], table.unpack(payload_error_notify))
 		end
 		return false
