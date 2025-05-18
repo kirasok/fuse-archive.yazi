@@ -1,6 +1,4 @@
---- @since 25.2.7
---- NOTE: REMOVE :parent() :name() :is_hovered() :ext() after upgrade to v25.4.4
---- https://github.com/sxyazi/yazi/pull/2572
+--- @since 25.4.8
 
 local shell = os.getenv("SHELL") or ""
 ---@enum FUSE_ARCHIVE_RETURN_CODE
@@ -191,8 +189,7 @@ local function path_quote(path)
 end
 
 local is_mount_point = ya.sync(function(state)
-	local dir = type(cx.active.current.cwd.name) == "function" and cx.active.current.cwd:name()
-		or cx.active.current.cwd.name
+	local dir = cx.active.current.cwd.name
 	for archive, _ in pairs(state) do
 		if archive == dir then
 			return true
@@ -211,19 +208,19 @@ local current_dir = ya.sync(function()
 end)
 
 local current_dir_name = ya.sync(function()
-	return type(cx.active.current.cwd.name) == "function" and cx.active.current.cwd:name() or cx.active.current.cwd.name
+	return cx.active.current.cwd.name
 end)
 
 local enter = ya.sync(function()
 	local h = cx.active.current.hovered
 	if h then
 		if h.cha.is_dir then
-			ya.manager_emit("enter", {})
+			ya.mgr_emit("enter", {})
 		else
 			if get_state("global", "smart_enter") then
-				ya.manager_emit("open", { hovered = true })
+				ya.mgr_emit("open", { hovered = true })
 			else
-				ya.manager_emit("enter", {})
+				ya.mgr_emit("enter", {})
 			end
 		end
 	end
@@ -269,7 +266,7 @@ local valid_extension = function(url)
 		if cha.is_dir then
 			return false
 		end
-		local file_extention = type(url.ext) == "function" and url:ext() or url.ext
+		local file_extention = url.ext
 		return VALID_EXTENSIONS[file_extention]
 	else
 		return false
@@ -427,7 +424,7 @@ local function mount_fuse(opts)
 	if retries >= max_retry or not ignore_global_error_notify then
 		if FUSE_ARCHIVE_MOUNT_ERROR_MSG[fuse_mount_res_code] then
 			if fuse_mount_res_code == FUSE_ARCHIVE_RETURN_CODE.ARCHIVE_READ_PERMISSION_INVALID then
-				local archive_ext = type(archive_path.ext) == "function" and archive_path:ext() or archive_path.ext
+				local archive_ext = archive_path.ext
 				if archive_ext == "rar" then
 					error("Password-protected RAR file is not supported yet!")
 					return false
@@ -500,26 +497,26 @@ return {
 				if success then
 					set_state(tmp_fname, "cwd", current_dir())
 					set_state(tmp_fname, "tmp", tostring(tmp_file_url))
-					ya.manager_emit("cd", { tostring(tmp_file_url) })
+					ya.mgr_emit("cd", { tostring(tmp_file_url) })
 				end
 			end
 			-- leave without unmount
 		elseif action == "leave" then
 			if not is_mount_point() then
-				ya.manager_emit("leave", {})
+				ya.mgr_emit("leave", {})
 				return
 			end
 			local file = current_dir_name()
-			ya.manager_emit("cd", { get_state(file, "cwd") })
+			ya.mgr_emit("cd", { get_state(file, "cwd") })
 			return
 		elseif action == "unmount" then
 			if not is_mount_point() then
-				ya.manager_emit("leave", {})
+				ya.mgr_emit("leave", {})
 				return
 			end
 			local file = current_dir_name()
 			local tmp_file = get_state(file, "tmp")
-			ya.manager_emit("cd", { get_state(file, "cwd") })
+			ya.mgr_emit("cd", { get_state(file, "cwd") })
 
 			local cmd_err_code, res = run_command(shell, { "-c", "fusermount -u " .. path_quote(tmp_file) })
 			if cmd_err_code or res and not res.status.success then

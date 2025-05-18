@@ -34,8 +34,8 @@ mount and unmount the archives manually.
 ## What news with this fork
 
 > [!IMPORTANT]
-> Minimum version: yazi v25.2.7.
-> 
+> Minimum version: yazi v25.4.8.
+>
 > Password-protected RAR file is not supported yet!
 
 ### Keep the file mount
@@ -59,7 +59,7 @@ it will still prompt you to enter a password. You only need to enter the passwor
 
 ## Requirements
 
-1. A relatively modern (>= 25.2.7) version of
+1. A relatively modern (>= 25.4.8) version of
    [yazi](https://github.com/sxyazi/yazi).
 
 2. This plugin only supports Linux, and requires having
