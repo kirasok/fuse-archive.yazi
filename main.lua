@@ -104,6 +104,9 @@ local VALID_EXTENSIONS = {
 	b64 = true,
 	base64 = true,
 	uu = true,
+  apk = true,
+  aia = true,
+  jar = true,
 }
 
 ---@enum Command.PIPED
