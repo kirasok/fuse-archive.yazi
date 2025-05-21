@@ -190,8 +190,9 @@ end
 
 local is_mount_point = ya.sync(function(state)
 	local dir = cx.active.current.cwd.name
+	local cwd = tostring(cx.active.current.cwd)
 	for archive, _ in pairs(state) do
-		if archive == dir then
+		if archive == dir and string.match(cwd, "^/tmp/yazi/fuse%-archive/[^/]+%.tmp%.[^/]+$") then
 			return true
 		end
 	end
