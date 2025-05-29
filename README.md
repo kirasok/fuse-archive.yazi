@@ -34,7 +34,7 @@ mount and unmount the archives manually.
 ## What news with this fork
 
 > [!IMPORTANT]
-> Minimum version: yazi v25.4.8.
+> Minimum version: yazi v25.5.28.
 >
 > Password-protected RAR file is not supported yet!
 
@@ -59,8 +59,7 @@ it will still prompt you to enter a password. You only need to enter the passwor
 
 ## Requirements
 
-1. A relatively modern (>= 25.4.8) version of
-   [yazi](https://github.com/sxyazi/yazi).
+1. [yazi](https://github.com/sxyazi/yazi).
 
 2. This plugin only supports Linux, and requires having
    [fuse-archive](https://github.com/google/fuse-archive), [xxHash](https://github.com/Cyan4973/xxHash) and `fuse3`
@@ -104,6 +103,8 @@ it will still prompt you to enter a password. You only need to enter the passwor
 ### fuse-archive.yazi:
 
 ```sh
+ya pkg add boydaihungst/fuse-archive
+# or
 ya pack -a boydaihungst/fuse-archive
 ```
 
@@ -149,7 +150,7 @@ the original location of the archive.
 Add this to your `~/.config/yazi/keymap.toml`:
 
 ```toml
-[manager]
+[mgr]
 prepend_keymap = [
     { on   = [ "<Right>" ], run = "plugin fuse-archive -- mount", desc = "Enter or Mount selected archive" },
     { on   = [ "<Left>" ], run = "plugin fuse-archive -- leave", desc = "Leave selected archive without unmount it" },
