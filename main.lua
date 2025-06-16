@@ -1,4 +1,4 @@
---- @since 25.5.28
+--- @since 25.5.31
 
 local shell = os.getenv("SHELL") or ""
 ---@enum FUSE_ARCHIVE_RETURN_CODE
@@ -498,7 +498,7 @@ return {
 				if success then
 					set_state(tmp_fname, "cwd", current_dir())
 					set_state(tmp_fname, "tmp", tostring(tmp_file_url))
-					ya.emit("cd", { tostring(tmp_file_url) })
+					ya.emit("cd", { tostring(tmp_file_url), raw = true })
 				end
 			end
 			-- leave without unmount
@@ -508,7 +508,7 @@ return {
 				return
 			end
 			local file = current_dir_name()
-			ya.emit("cd", { get_state(file, "cwd") })
+			ya.emit("cd", { get_state(file, "cwd"), raw = true })
 			return
 		elseif action == "unmount" then
 			if not is_mount_point() then
@@ -517,7 +517,7 @@ return {
 			end
 			local file = current_dir_name()
 			local tmp_file = get_state(file, "tmp")
-			ya.emit("cd", { get_state(file, "cwd") })
+			ya.emit("cd", { get_state(file, "cwd"), raw = true })
 
 			local cmd_err_code, res = run_command(shell, { "-c", "fusermount -u " .. path_quote(tmp_file) })
 			if cmd_err_code or res and not res.status.success then
