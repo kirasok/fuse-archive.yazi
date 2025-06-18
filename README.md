@@ -1,4 +1,4 @@
-# fuse-archive.yazi
+# fuse-archive.yazi (Fork)
 
 <!--toc:start-->
 
@@ -104,8 +104,6 @@ it will still prompt you to enter a password. You only need to enter the passwor
 
 ```sh
 ya pkg add boydaihungst/fuse-archive
-# or
-ya pack -a boydaihungst/fuse-archive
 ```
 
 Modify your `~/.config/yazi/init.lua` to include:
@@ -114,15 +112,20 @@ Modify your `~/.config/yazi/init.lua` to include:
 require("fuse-archive"):setup()
 ```
 
-Install this shell script if you want yazi auto un-mount all mounted archives after `exit` the `last`
+Install this shell script if you want yazi auto un-mount all mounted archives after closed the `last`
 yazi instance:
 
-Both yazi_fuse.fish and bash.sh are in the `yazi/plugins/fuse-archive.yazi/assets/` directory.
+- For `fish` shell: add this command to `~/.config/fish/config.fish` file:
 
-- For `fish` shell: copy [assets/yazi_fuse.fish](./assets/yazi_fuse.fish) file to `~/.config/fish/conf.d/`.
-  e.g. `~/.config/fish/conf.d/yazi_fuse.fish`
+  ```fish
+  test -f ~/.config/yazi/plugins/fuse-archive.yazi/assets/yazi_fuse.fish; and source ~/.config/yazi/plugins/fuse-archive.yazi/assets/yazi_fuse.fish
+  ```
 
-- For `bash` shell: copy the content of [assets/bash.sh](./assets/bash.sh) file to `~/.bashrc` file.
+- For `bash` shell: add this command to `~/.bashrc` file:
+
+  ```sh
+  [[ -f ~/.config/yazi/plugins/fuse-archive.yazi/assets/yazi_fuse.sh ]] && . ~/.config/yazi/plugins/fuse-archive.yazi/assets/yazi_fuse.sh
+  ```
 
 ### Options
 
@@ -176,6 +179,4 @@ In case you run into any problems and need to unmount something manually, or
 delete any temporary directories, the location of the mounts is one of the
 following three in order of preference:
 
-1. ~~`$XDG_STATE_HOME/yazi/fuse-archive/...`~~
-2. ~~`$HOME/.local/state/yazi/fuse-archive/...`~~
-3. `/tmp/yazi/fuse-archive/...`
+1. `/tmp/yazi/fuse-archive/...`
