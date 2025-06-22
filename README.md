@@ -1,4 +1,4 @@
-# fuse-archive.yazi
+# fuse-archive.yazi (Fork)
 
 <!--toc:start-->
 
@@ -34,7 +34,7 @@ mount and unmount the archives manually.
 ## What news with this fork
 
 > [!IMPORTANT]
-> Minimum version: yazi v25.4.8.
+> Minimum version: yazi v25.5.31.
 >
 > Password-protected RAR file is not supported yet!
 
@@ -59,8 +59,7 @@ it will still prompt you to enter a password. You only need to enter the passwor
 
 ## Requirements
 
-1. A relatively modern (>= 25.4.8) version of
-   [yazi](https://github.com/sxyazi/yazi).
+1. [yazi](https://github.com/sxyazi/yazi).
 
 2. This plugin only supports Linux, and requires having
    [fuse-archive](https://github.com/google/fuse-archive), [xxHash](https://github.com/Cyan4973/xxHash) and `fuse3`
@@ -104,7 +103,7 @@ it will still prompt you to enter a password. You only need to enter the passwor
 ### fuse-archive.yazi:
 
 ```sh
-ya pack -a boydaihungst/fuse-archive
+ya pkg add boydaihungst/fuse-archive
 ```
 
 Modify your `~/.config/yazi/init.lua` to include:
@@ -113,15 +112,20 @@ Modify your `~/.config/yazi/init.lua` to include:
 require("fuse-archive"):setup()
 ```
 
-Install this shell script if you want yazi auto un-mount all mounted archives after `exit` the `last`
+Install this shell script if you want yazi auto un-mount all mounted archives after closed the `last`
 yazi instance:
 
-Both yazi_fuse.fish and bash.sh are in the `yazi/plugins/fuse-archive.yazi/assets/` directory.
+- For `fish` shell: add this command to `~/.config/fish/config.fish` file:
 
-- For `fish` shell: copy [assets/yazi_fuse.fish](./assets/yazi_fuse.fish) file to `~/.config/fish/conf.d/`.
-  e.g. `~/.config/fish/conf.d/yazi_fuse.fish`
+  ```fish
+  test -f ~/.config/yazi/plugins/fuse-archive.yazi/assets/yazi_fuse.fish; and source ~/.config/yazi/plugins/fuse-archive.yazi/assets/yazi_fuse.fish
+  ```
 
-- For `bash` shell: copy the content of [assets/bash.sh](./assets/bash.sh) file to `~/.bashrc` file.
+- For `bash` shell: add this command to `~/.bashrc` file:
+
+  ```sh
+  [[ -f ~/.config/yazi/plugins/fuse-archive.yazi/assets/yazi_fuse.sh ]] && . ~/.config/yazi/plugins/fuse-archive.yazi/assets/yazi_fuse.sh
+  ```
 
 ### Options
 
@@ -149,7 +153,7 @@ the original location of the archive.
 Add this to your `~/.config/yazi/keymap.toml`:
 
 ```toml
-[manager]
+[mgr]
 prepend_keymap = [
     { on   = [ "<Right>" ], run = "plugin fuse-archive -- mount", desc = "Enter or Mount selected archive" },
     { on   = [ "<Left>" ], run = "plugin fuse-archive -- leave", desc = "Leave selected archive without unmount it" },
@@ -175,6 +179,4 @@ In case you run into any problems and need to unmount something manually, or
 delete any temporary directories, the location of the mounts is one of the
 following three in order of preference:
 
-1. ~~`$XDG_STATE_HOME/yazi/fuse-archive/...`~~
-2. ~~`$HOME/.local/state/yazi/fuse-archive/...`~~
-3. `/tmp/yazi/fuse-archive/...`
+1. `/tmp/yazi/fuse-archive/...`

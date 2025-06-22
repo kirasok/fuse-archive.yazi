@@ -4,8 +4,10 @@ function umount_yazi_fuse
         # get mount points
         set fuse_archive_mnt_points (findmnt --output TARGET --noheadings --list | grep "^/tmp/yazi/fuse-archive" | sort -r)
         for mnt_point in $fuse_archive_mnt_points
-            # force unmount.
-            fusermount -u "$mnt_point"
+            if not test -z "$mnt_point"
+                # force unmount.
+                fusermount -u "$mnt_point"
+            end
         end
     end
 end

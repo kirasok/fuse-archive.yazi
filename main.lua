@@ -1,4 +1,4 @@
---- @since 25.4.8
+--- @since 25.5.31
 
 local shell = os.getenv("SHELL") or ""
 ---@enum FUSE_ARCHIVE_RETURN_CODE
@@ -193,8 +193,9 @@ end
 
 local is_mount_point = ya.sync(function(state)
 	local dir = cx.active.current.cwd.name
+	local cwd = tostring(cx.active.current.cwd)
 	for archive, _ in pairs(state) do
-		if archive == dir then
+		if archive == dir and string.match(cwd, "^/tmp/yazi/fuse%-archive/[^/]+%.tmp%.[^/]+$") then
 			return true
 		end
 	end
@@ -218,12 +219,12 @@ local enter = ya.sync(function()
 	local h = cx.active.current.hovered
 	if h then
 		if h.cha.is_dir then
-			ya.mgr_emit("enter", {})
+			ya.emit("enter", {})
 		else
 			if get_state("global", "smart_enter") then
-				ya.mgr_emit("open", { hovered = true })
+				ya.emit("open", { hovered = true })
 			else
-				ya.mgr_emit("enter", {})
+				ya.emit("enter", {})
 			end
 		end
 	end
@@ -238,7 +239,7 @@ local function run_command(cmd, args, _stdin)
 	local cwd = current_dir()
 	local stdin = _stdin or Command.INHERIT
 	local child, cmd_err =
-		Command(cmd):args(args):cwd(cwd):stdin(stdin):stdout(Command.PIPED):stderr(Command.INHERIT):spawn()
+		Command(cmd):arg(args):cwd(cwd):stdin(stdin):stdout(Command.PIPED):stderr(Command.INHERIT):spawn()
 
 	if not child then
 		error("Failed to start `%s` failed with error: %s", cmd, cmd_err)
@@ -363,7 +364,7 @@ local function mount_fuse(opts)
 	mount_opts = tbl_unique_strings({ "auto_unmount", table.unpack(mount_opts or {}) })
 
 	local res, _ = Command(shell)
-		:args({
+		:arg({
 			"-c",
 			(passphrase and "printf '%s\n' " .. path_quote(passphrase) .. " | " or "")
 				.. " fuse-archive -o "
@@ -500,26 +501,26 @@ return {
 				if success then
 					set_state(tmp_fname, "cwd", current_dir())
 					set_state(tmp_fname, "tmp", tostring(tmp_file_url))
-					ya.mgr_emit("cd", { tostring(tmp_file_url) })
+					ya.emit("cd", { tostring(tmp_file_url), raw = true })
 				end
 			end
 			-- leave without unmount
 		elseif action == "leave" then
 			if not is_mount_point() then
-				ya.mgr_emit("leave", {})
+				ya.emit("leave", {})
 				return
 			end
 			local file = current_dir_name()
-			ya.mgr_emit("cd", { get_state(file, "cwd") })
+			ya.emit("cd", { get_state(file, "cwd"), raw = true })
 			return
 		elseif action == "unmount" then
 			if not is_mount_point() then
-				ya.mgr_emit("leave", {})
+				ya.emit("leave", {})
 				return
 			end
 			local file = current_dir_name()
 			local tmp_file = get_state(file, "tmp")
-			ya.mgr_emit("cd", { get_state(file, "cwd") })
+			ya.emit("cd", { get_state(file, "cwd"), raw = true })
 
 			local cmd_err_code, res = run_command(shell, { "-c", "fusermount -u " .. path_quote(tmp_file) })
 			if cmd_err_code or res and not res.status.success then
