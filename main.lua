@@ -201,7 +201,10 @@ end)
 
 local current_file = ya.sync(function()
 	local h = cx.active.current.hovered
-	return h and h.url
+	if not h then
+		return
+	end
+	return h.url, h.cha.is_dir
 end)
 
 local current_dir = ya.sync(function()
@@ -212,20 +215,17 @@ local current_dir_name = ya.sync(function()
 	return cx.active.current.cwd.name
 end)
 
-local enter = ya.sync(function()
-	local h = cx.active.current.hovered
-	if h then
-		if h.cha.is_dir then
-			ya.emit("enter", {})
+local enter = function(hovered_url, is_dir)
+	if hovered_url and is_dir then
+		ya.emit("enter", {})
+	else
+		if get_state("global", "smart_enter") then
+			ya.emit("open", { hovered = true })
 		else
-			if get_state("global", "smart_enter") then
-				ya.emit("open", { hovered = true })
-			else
-				ya.emit("enter", {})
-			end
+			ya.emit("enter", {})
 		end
 	end
-end)
+end
 
 ---run any command
 ---@param cmd string
@@ -259,19 +259,6 @@ local is_mounted = function(dir_path)
 		return false
 	end
 	return res and res.status.success
-end
-
-local valid_extension = function(url)
-	local cha, _ = fs.cha(url)
-	if cha then
-		if cha.is_dir then
-			return false
-		end
-		local file_extention = url.ext
-		return VALID_EXTENSIONS[file_extention]
-	else
-		return false
-	end
 end
 
 ---Get the fuse mount point
@@ -476,15 +463,15 @@ return {
 		end
 
 		if action == "mount" then
-			local file_url = current_file()
-			if file_url == nil then
+			local hovered_url, is_dir = current_file()
+			if hovered_url == nil then
 				return
 			end
-			if not valid_extension(file_url) then
-				enter()
+			if is_dir or is_dir == nil or (is_dir == false and not VALID_EXTENSIONS[hovered_url.ext]) then
+				enter(hovered_url, is_dir)
 				return
 			end
-			local tmp_fname = tmp_file_name(file_url)
+			local tmp_fname = tmp_file_name(hovered_url)
 			if not tmp_fname then
 				return
 			end
@@ -492,7 +479,7 @@ return {
 
 			if tmp_file_url then
 				local success = mount_fuse({
-					archive_path = file_url,
+					archive_path = hovered_url,
 					fuse_mount_point = tmp_file_url,
 				})
 				if success then
