@@ -310,6 +310,7 @@ local function show_ask_pw_dialog()
 	local input_pw = ya.input({
 		title = "Enter password to unlock:",
 		obscure = true,
+		pos = { "center", x = 0, y = 0, w = 50, h = 3 },
 		position = { "center", x = 0, y = 0, w = 50, h = 3 },
 		realtime = true,
 	})
