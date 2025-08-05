@@ -76,7 +76,7 @@ This plugin supports MacOS, but you need to install `macfuse` instead of `fuse3`
 
 1. [yazi](https://github.com/sxyazi/yazi).
 
-2. This plugin only supports Linux, and requires having latest
+2. This plugin only supports Linux and MacOS, and requires having latest
    [fuse-archive](https://github.com/google/fuse-archive), [xxHash](https://github.com/Cyan4973/xxHash) and `fuse3` for linux, and [macfuse](https://github.com/macfuse/macfuse/releases) for macOS installed.
    This fork requires you to build and install fuse-archive with latest
    source from github (because the latest released version in some distros is too old, 2020).
