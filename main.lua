@@ -40,99 +40,6 @@ local YA_INPUT_EVENT = {
 	VALUE_CHANGED = 3,
 }
 
-local VALID_EXTENSIONS = {
-	tbr = true,
-	tlzip = true,
-	tzs = true,
-	tzstd = true,
-	deb = true,
-	["7z"] = true,
-	["7zip"] = true,
-	a = true,
-	ar = true,
-	apk = true,
-	cab = true,
-	cpio = true,
-	iso = true,
-	iso9660 = true,
-	jar = true,
-	mtree = true,
-	rar = true,
-	rpm = true,
-	tar = true,
-	warc = true,
-	xar = true,
-	zip = true,
-	zipx = true,
-	crx = true,
-	odf = true,
-	odg = true,
-	odp = true,
-	ods = true,
-	odt = true,
-	docx = true,
-	ppsx = true,
-	pptx = true,
-	xlsx = true,
-	tb2 = true,
-	tbz = true,
-	tbz2 = true,
-	tz2 = true,
-	tgz = true,
-	tlz4 = true,
-	tlz = true,
-	tlzma = true,
-	txz = true,
-	tz = true,
-	taz = true,
-	tzst = true,
-	br = true,
-	brotli = true,
-	bz2 = true,
-	bzip2 = true,
-	grz = true,
-	grzip = true,
-	gz = true,
-	gzip = true,
-	lha = true,
-	lrz = true,
-	lrzip = true,
-	lz4 = true,
-	lz = true,
-	lzip = true,
-	lzma = true,
-	lzo = true,
-	lzop = true,
-	xz = true,
-	z = true,
-	zst = true,
-	zstd = true,
-	b64 = true,
-	base64 = true,
-	uu = true,
-	["tar.br"] = true,
-	["tar.brotli"] = true,
-	["tar.bz2"] = true,
-	["tar.bzip2"] = true,
-	["tar.grz"] = true,
-	["tar.grzip"] = true,
-	["tar.gz"] = true,
-	["tar.gzip"] = true,
-	["tar.lha"] = true,
-	["tar.lrz"] = true,
-	["tar.lrzip"] = true,
-	["tar.lz"] = true,
-	["tar.lz4"] = true,
-	["tar.lzip"] = true,
-	["tar.lzma"] = true,
-	["tar.lzo"] = true,
-	["tar.lzop"] = true,
-	["tar.xz"] = true,
-	["tar.z"] = true,
-	["tar.zst"] = true,
-	["tar.zstd"] = true,
-}
-
 local function error(s, ...)
 	ya.notify({ title = "fuse-archive", content = string.format(s, ...), timeout = 3, level = "error" })
 end
@@ -272,6 +179,36 @@ local function tbl_unique_strings(tbl)
 	end
 
 	return unique_table
+end
+
+local function tbl_to_set(t1)
+	local set = {}
+
+	for _, v in ipairs(t1) do
+		set[v] = true
+	end
+
+	return set
+end
+
+local function remove_from_set(set, t2)
+	if not set then
+		set = {}
+	end
+	for _, v in ipairs(t2) do
+		set[v] = nil
+	end
+	return set
+end
+
+local function add_to_set(set, t2)
+	if not set then
+		set = {}
+	end
+	for _, v in ipairs(t2) do
+		set[v] = true
+	end
+	return set
 end
 
 ---
@@ -448,17 +385,119 @@ local function setup(_, opts)
 	end
 	set_state("global", "mount_options", mount_options)
 
-	local excluded_extensions = {}
-	if opts and opts.excluded_extensions then
-		if type(opts.excluded_extensions) == "table" then
-			for _, ext in ipairs(opts.excluded_extensions) do
-				excluded_extensions[ext] = true
-			end
+	local ORIGINAL_SUPPORTED_EXTENSIONS = {
+		"aia",
+		"jar",
+		"tbr",
+		"tlzip",
+		"tzs",
+		"tzstd",
+		"deb",
+		"7z",
+		"7zip",
+		"a",
+		"ar",
+		"apk",
+		"cab",
+		"cpio",
+		"iso",
+		"iso9660",
+		"jar",
+		"mtree",
+		"rar",
+		"rpm",
+		"tar",
+		"warc",
+		"xar",
+		"zip",
+		"zipx",
+		"crx",
+		"odf",
+		"odg",
+		"odp",
+		"ods",
+		"odt",
+		"docx",
+		"ppsx",
+		"pptx",
+		"xlsx",
+		"tb2",
+		"tbz",
+		"tbz2",
+		"tz2",
+		"tgz",
+		"tlz4",
+		"tlz",
+		"tlzma",
+		"txz",
+		"tz",
+		"taz",
+		"tzst",
+		"br",
+		"brotli",
+		"bz2",
+		"bzip2",
+		"grz",
+		"grzip",
+		"gz",
+		"gzip",
+		"lha",
+		"lrz",
+		"lrzip",
+		"lz4",
+		"lz",
+		"lzip",
+		"lzma",
+		"lzo",
+		"lzop",
+		"xz",
+		"z",
+		"zst",
+		"zstd",
+		"b64",
+		"base64",
+		"uu",
+		"tar.br",
+		"tar.brotli",
+		"tar.bz2",
+		"tar.bzip2",
+		"tar.grz",
+		"tar.grzip",
+		"tar.gz",
+		"tar.gzip",
+		"tar.lha",
+		"tar.lrz",
+		"tar.lrzip",
+		"tar.lz",
+		"tar.lz4",
+		"tar.lzip",
+		"tar.lzma",
+		"tar.lzo",
+		"tar.lzop",
+		"tar.xz",
+		"tar.z",
+		"tar.zst",
+		"tar.zstd",
+	}
+
+	local SET_ALLOWED_EXTENSIONS = tbl_to_set(ORIGINAL_SUPPORTED_EXTENSIONS)
+
+	if opts and opts.extra_extensions then
+		if type(opts.extra_extensions) == "table" then
+			SET_ALLOWED_EXTENSIONS = add_to_set(SET_ALLOWED_EXTENSIONS, opts.extra_extensions)
 		else
-			error("excluded_extensions option in setup() must be a table")
+			error("extra_extensions option in setup() must be a table of string")
 		end
 	end
-	set_state("global", "excluded_extensions", excluded_extensions)
+
+	if opts and opts.excluded_extensions then
+		if type(opts.excluded_extensions) == "table" then
+			SET_ALLOWED_EXTENSIONS = remove_from_set(SET_ALLOWED_EXTENSIONS, opts.excluded_extensions)
+		else
+			error("excluded_extensions option in setup() must be a table of string")
+		end
+	end
+	set_state("global", "valid_extensions", SET_ALLOWED_EXTENSIONS)
 end
 
 return {
@@ -473,12 +512,8 @@ return {
 			if hovered_url == nil then
 				return
 			end
-			local excluded_extensions = get_state("global", "excluded_extensions")
-			if
-				is_dir
-				or is_dir == nil
-				or (is_dir == false and (not VALID_EXTENSIONS[hovered_url.ext] or excluded_extensions[hovered_url.ext]))
-			then
+			local VALID_EXTENSIONS = get_state("global", "valid_extensions")
+			if is_dir or is_dir == nil or (is_dir == false and not VALID_EXTENSIONS[hovered_url.ext]) then
 				enter(hovered_url, is_dir)
 				return
 			end

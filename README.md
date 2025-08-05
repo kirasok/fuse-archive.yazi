@@ -149,7 +149,13 @@ yazi instance:
   test -f ~/.config/yazi/plugins/fuse-archive.yazi/assets/yazi_fuse.fish; and source ~/.config/yazi/plugins/fuse-archive.yazi/assets/yazi_fuse.fish
   ```
 
-- For `bash` or `zsh` shell: add this command to `~/.bashrc` file:
+- For `bash` shell: add this command to `~/.bashrc` file:
+
+  ```sh
+  [[ -f ~/.config/yazi/plugins/fuse-archive.yazi/assets/yazi_fuse.sh ]] && . ~/.config/yazi/plugins/fuse-archive.yazi/assets/yazi_fuse.sh
+  ```
+
+- For `zsh` shell: add this command to `~/.zshrc` file:
 
   ```sh
   [[ -f ~/.config/yazi/plugins/fuse-archive.yazi/assets/yazi_fuse.sh ]] && . ~/.config/yazi/plugins/fuse-archive.yazi/assets/yazi_fuse.sh
@@ -162,15 +168,18 @@ The plugin supports the following options, which can be assigned during setup:
 1. (optional) `smart_enter`: If `true`, when _entering_ a file it will be _opened_, while
    directories will always be _entered_. The default value is `false`.
 
-2. (optional) `excluded_extensions`: List of extensions that will be excluded from mounting.
+2. (optional) `excluded_extensions`: A list of extensions that will be excluded from mounting.
 
-3. (optional) `mount_options`: String of mount options to be used when mounting the archive, separated by comma or space.
+3. (optional) `extra_extensions`: A list of extensions to add to the supported mount list. This is useful if you want to mount an archive format that I may have missed or am unaware is supported by fuse-archive.
+
+4. (optional) `mount_options`: String of mount options to be used when mounting the archive, separated by comma or space.
    List of options: `fuse-archive -h`
 
 ```lua
 require("fuse-archive"):setup({
   smart_enter = true,
   excluded_extensions = { "deb", "apk", "rpm" },
+  extra_extensions = { "xyz" },
   mount_options = "nocache,nosymlinks",
 })
 ```
