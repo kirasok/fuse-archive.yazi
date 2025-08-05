@@ -140,31 +140,6 @@ Modify your `~/.config/yazi/init.lua` to include:
 require("fuse-archive"):setup()
 ```
 
-Install this shell script if you want yazi auto un-mount all mounted archives after closed a shell process:
-
-> [!IMPORTANT]
->
-> This is unnecessary if you override and use `q` and `Q` key to quit yazi
-> But it doesn't hurt to to install this script
-
-- For `fish` shell, add this command to `~/.config/fish/config.fish` file:
-
-  ```fish
-  test -f ~/.config/yazi/plugins/fuse-archive.yazi/assets/yazi_fuse.fish; and source ~/.config/yazi/plugins/fuse-archive.yazi/assets/yazi_fuse.fish
-  ```
-
-- For `bash` shell, add this command to `~/.bashrc` file:
-
-  ```sh
-  [[ -f ~/.config/yazi/plugins/fuse-archive.yazi/assets/yazi_fuse.sh ]] && . ~/.config/yazi/plugins/fuse-archive.yazi/assets/yazi_fuse.sh
-  ```
-
-- For `zsh` shell, add this command to `~/.zshrc` file:
-
-  ```sh
-  [[ -f ~/.config/yazi/plugins/fuse-archive.yazi/assets/yazi_fuse.sh ]] && . ~/.config/yazi/plugins/fuse-archive.yazi/assets/yazi_fuse.sh
-  ```
-
 ### Setup options
 
 The plugin supports the following options, which can be assigned during setup:
@@ -212,7 +187,7 @@ prepend_keymap = [
     { on   = [ "l" ], run = "plugin fuse-archive -- mount", desc = "Enter or Mount selected archive" },
     { on   = [ "h" ], run = "plugin fuse-archive -- leave", desc = "Leave selected archive without unmount it" },
 
-    # Over quit command for yazi <= v25.5.31. For nightly yazi, you don't need to add these lines.
+    # Over quit command for yazi <= v25.5.31 to unmount on quit. For nightly yazi, you don't need to add these lines.
     { on   = [ "q" ], run = ["plugin fuse-archive -- unmount", "quit"], desc = "Quit the process" },
     { on   = [ "Q" ], run = ["plugin fuse-archive -- unmount", "quit --no-cwd-file"], desc = "Quit without outputting cwd-file" },
     # Or if you use project.yazi or other plugin that override quit command, just keep in mind to add unmount command before quit command.
