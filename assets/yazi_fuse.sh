@@ -8,7 +8,7 @@ umount_yazi_fuse() {
     # Loop through each mount point and force unmount
     while IFS= read -r mnt_point; do
       if [[ -n "$mnt_point" ]]; then
-        fusermount -u "$mnt_point"
+        umount "$mnt_point"
       fi
     done <<<"$fuse_archive_mnt_points"
   fi

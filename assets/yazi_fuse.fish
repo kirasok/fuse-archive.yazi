@@ -6,7 +6,7 @@ function umount_yazi_fuse
         for mnt_point in $fuse_archive_mnt_points
             if not test -z "$mnt_point"
                 # force unmount.
-                fusermount -u "$mnt_point"
+                umount "$mnt_point"
             end
         end
     end
