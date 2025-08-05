@@ -41,10 +41,16 @@ local YA_INPUT_EVENT = {
 }
 
 local VALID_EXTENSIONS = {
+	tbr = true,
+	tlzip = true,
+	tzs = true,
+	tzstd = true,
+	deb = true,
 	["7z"] = true,
 	["7zip"] = true,
 	a = true,
 	ar = true,
+	apk = true,
 	cab = true,
 	cpio = true,
 	iso = true,
@@ -104,59 +110,28 @@ local VALID_EXTENSIONS = {
 	b64 = true,
 	base64 = true,
 	uu = true,
+	["tar.br"] = true,
+	["tar.brotli"] = true,
+	["tar.bz2"] = true,
+	["tar.bzip2"] = true,
+	["tar.grz"] = true,
+	["tar.grzip"] = true,
+	["tar.gz"] = true,
+	["tar.gzip"] = true,
+	["tar.lha"] = true,
+	["tar.lrz"] = true,
+	["tar.lrzip"] = true,
+	["tar.lz"] = true,
+	["tar.lz4"] = true,
+	["tar.lzip"] = true,
+	["tar.lzma"] = true,
+	["tar.lzo"] = true,
+	["tar.lzop"] = true,
+	["tar.xz"] = true,
+	["tar.z"] = true,
+	["tar.zst"] = true,
+	["tar.zstd"] = true,
 }
-
----@enum Command.PIPED
----@enum Command.NULL
----@enum Command.INHERIT
-
----@type Command
-local Command = _G.Command
-
----@class (exact) Command
----@overload fun(cmd: string): self
----@field PIPED Command.PIPED
----@field NULL Command.NULL
----@field INHERIT Command.INHERIT
----@field arg fun(self: Command, arg: string): self
----@field args fun(self: Command, args: string[]): self
----@field cwd fun(self: Command, dir: string): self
----@field env fun(self: Command, key: string, value: string): self
----@field stdin fun(self: Command, cfg: Command.PIPED | Command.NULL | Command.INHERIT| STD_STREAM): self
----@field stdout fun(self: Command, cfg: Command.PIPED | Command.NULL | Command.INHERIT| STD_STREAM): self
----@field stderr fun(self: Command, cfg: Command.PIPED | Command.NULL | Command.INHERIT| STD_STREAM): self
----@field spawn fun(self: Command): Child|nil, unknown
----@field output fun(self: Command): Output|nil, unknown
----@field status fun(self: Command): Status|nil, unknown
-
----@alias STD_STREAM unknown
-
----@class (exact) Child
----@field read fun(self: Child, len: string): string, 1|0
----@field read_line fun(self: Child): string, 1|0
----@field read_line_with fun(self: Child, opts: {timeout: integer}): string, 1|2|3
----@field wait fun(self: Child): Status|nil, unknown
----@field wait_with_output fun(self: Child): Output|nil, unknown
----@field start_kill fun(self: Child): boolean, unknown
---- stdin(Command.PIPED) is set
----@field take_stdin fun(self: Child): STD_STREAM|nil, unknown
---- stdin(Command.PIPED) is set
----@field take_stdout fun(self: Child): STD_STREAM|nil, unknown
---- stdin(Command.PIPED) is set
----@field take_stderr fun(self: Child): STD_STREAM|nil, unknown
---- stdin(Command.PIPED) is set
---- take_stdin() has never been called
----@field write_all fun(self: Child, src: string): STD_STREAM|nil, unknown
----@field flush fun(self: Child): STD_STREAM|nil, unknown
-
----@class (exact) Output The Output of the command if successful; otherwise, nil
----@field status Status The Status of the child process
----@field stdout string The stdout of the child process, which is a string
----@field stderr string The stderr of the child process, which is a string
-
----@class (exact) Status The Status of the child process
----@field success boolean whether the child process exited successfully, which is a boolean.
----@field code integer the exit code of the child process, which is an integer if any
 
 local function error(s, ...)
 	ya.notify({ title = "fuse-archive", content = string.format(s, ...), timeout = 3, level = "error" })
@@ -199,6 +174,7 @@ local is_mount_point = ya.sync(function(state)
 	return false
 end)
 
+---@return Url|nil, boolean|nil
 local current_file = ya.sync(function()
 	local h = cx.active.current.hovered
 	if not h then
@@ -273,6 +249,14 @@ local fuse_dir = function()
 	return fuse_mount_point
 end
 
+local function split_by_space_or_comma(input)
+	local result = {}
+	for word in string.gmatch(input, "[^%s,]+") do
+		table.insert(result, word)
+	end
+	return result
+end
+
 --- return a string array with unique value
 ---@param tbl string[]
 ---@return string[] table with only unique strings
@@ -315,7 +299,7 @@ local function show_ask_pw_dialog()
 		realtime = true,
 	})
 
-	while true do
+	while true and input_pw do
 		---@type string, YA_INPUT_EVENT
 		local value, ev = input_pw:recv()
 		if ev == YA_INPUT_EVENT.CONFIRMED then
@@ -331,12 +315,12 @@ local function show_ask_pw_dialog()
 end
 
 ---mount fuse
----@param opts {archive_path: Url, fuse_mount_point: Url, mount_opts: string[], passphrase?: string, max_retry?: integer, retries?: integer}
+---@param opts {archive_path: Url, fuse_mount_point: Url, mount_options: string[], passphrase?: string, max_retry?: integer, retries?: integer}
 ---@return boolean
 local function mount_fuse(opts)
 	local archive_path = opts.archive_path
 	local fuse_mount_point = opts.fuse_mount_point
-	local mount_opts = opts.mount_opts
+	local mount_options = opts.mount_options or {}
 	local passphrase = opts.passphrase
 	local max_retry = opts.max_retry or 3
 	local retries = opts.retries or 0
@@ -346,14 +330,14 @@ local function mount_fuse(opts)
 	if is_mounted(opts.fuse_mount_point) then
 		return true
 	end
-	mount_opts = tbl_unique_strings({ "auto_unmount", table.unpack(mount_opts or {}) })
+	local _mount_opts = tbl_unique_strings({ "auto_unmount", table.unpack(mount_options) })
 
 	local res, _ = Command(shell)
 		:arg({
 			"-c",
 			(passphrase and "printf '%s\n' " .. path_quote(passphrase) .. " | " or "")
 				.. " fuse-archive -o "
-				.. table.concat(mount_opts, ",")
+				.. table.concat(_mount_opts, ",")
 				.. " "
 				.. path_quote(archive_path)
 				.. " "
@@ -385,7 +369,7 @@ local function mount_fuse(opts)
 		or fuse_mount_res_code == FUSE_ARCHIVE_RETURN_CODE.CREATE_CACHE_FILE_FAILED
 	then
 		-- disable cache
-		table.insert(mount_opts, "nocache")
+		table.insert(mount_options, "nocache")
 	elseif
 		fuse_mount_res_code == FUSE_ARCHIVE_RETURN_CODE.ENCRYPTED_FILE_BUT_NOT_PASSWORD
 		or fuse_mount_res_code == FUSE_ARCHIVE_RETURN_CODE.ENCRYPTED_FILE_BUT_WRONG_PASSWORD
@@ -428,7 +412,7 @@ local function mount_fuse(opts)
 	return mount_fuse({
 		archive_path = archive_path,
 		fuse_mount_point = fuse_mount_point,
-		mount_opts = mount_opts,
+		mount_options = mount_options,
 		passphrase = passphrase,
 		retries = retries,
 		max_retry = max_retry,
@@ -437,7 +421,7 @@ end
 
 ---Mount path using inode (unique for each files)
 ---e.g. /tmp/yazi/fuse-archive/test.zip.tmp.11675995
----@param file_url string
+---@param file_url Url
 ---@return string|nil
 local function tmp_file_name(file_url)
 	local fname = file_url.name
@@ -454,6 +438,27 @@ local function setup(_, opts)
 	local fuse = fuse_dir()
 	set_state("global", "fuse_dir", fuse)
 	set_state("global", "smart_enter", opts and opts.smart_enter)
+	local mount_options = {}
+	if opts and opts.mount_options then
+		if type(opts.mount_options) == "string" then
+			mount_options = split_by_space_or_comma(opts.mount_options)
+		else
+			error("mount_options option in setup() must be a string separated by space or comma")
+		end
+	end
+	set_state("global", "mount_options", mount_options)
+
+	local excluded_extensions = {}
+	if opts and opts.excluded_extensions then
+		if type(opts.excluded_extensions) == "table" then
+			for _, ext in ipairs(opts.excluded_extensions) do
+				excluded_extensions[ext] = true
+			end
+		else
+			error("excluded_extensions option in setup() must be a table")
+		end
+	end
+	set_state("global", "excluded_extensions", excluded_extensions)
 end
 
 return {
@@ -468,7 +473,12 @@ return {
 			if hovered_url == nil then
 				return
 			end
-			if is_dir or is_dir == nil or (is_dir == false and not VALID_EXTENSIONS[hovered_url.ext]) then
+			local excluded_extensions = get_state("global", "excluded_extensions")
+			if
+				is_dir
+				or is_dir == nil
+				or (is_dir == false and (not VALID_EXTENSIONS[hovered_url.ext] or excluded_extensions[hovered_url.ext]))
+			then
 				enter(hovered_url, is_dir)
 				return
 			end
@@ -482,6 +492,7 @@ return {
 				local success = mount_fuse({
 					archive_path = hovered_url,
 					fuse_mount_point = tmp_file_url,
+					mount_options = get_state("global", "mount_options"),
 				})
 				if success then
 					set_state(tmp_fname, "cwd", current_dir())

@@ -2,16 +2,19 @@
 
 <!--toc:start-->
 
-- [fuse-archive.yazi](#fuse-archiveyazi)
+- [fuse-archive.yazi (Fork)](#fuse-archiveyazi-fork)
   - [What news with this fork](#what-news-with-this-fork)
     - [Keep the file mount](#keep-the-file-mount)
     - [Support multiple deep mount](#support-multiple-deep-mount)
+    - [Support mountoptions](#support-mountoptions)
+    - [Exclude extensions](#exclude-extensions)
+    - [Support MacOS](#support-macos)
   - [Requirements](#requirements)
   - [Installation](#installation)
     - [Dependencies:](#dependencies)
     - [fuse-archive.yazi:](#fuse-archiveyazi)
-    - [Options](#options)
-  - [Usage](#usage)
+    - [Setup options](#setup-options)
+  - [Key mapping](#key-mapping)
   <!--toc:end-->
 
 <!--toc:start-->
@@ -57,14 +60,26 @@ it will still prompt you to enter a password. You only need to enter the passwor
     - Grandchild_2.zip (with another password)
       - GranGrandchild_3.zip (with another password)
 
+### Support mountoptions
+
+You can use `plugin fuse-archive -- mount` with mount options. Add `mount_options` option to `setup()` function.
+
+### Exclude extensions
+
+Using `excluded_extensions` option, you can exclude some extensions from mounting.
+
+### Support MacOS
+
+This plugin supports MacOS, but you need to install `fuse3` and `macfuse` first.
+
 ## Requirements
 
 1. [yazi](https://github.com/sxyazi/yazi).
 
-2. This plugin only supports Linux, and requires having
-   [fuse-archive](https://github.com/google/fuse-archive), [xxHash](https://github.com/Cyan4973/xxHash) and `fuse3`
-   installed. This fork requires you to build and install fuse-archive with latest
-   source from github (because the latest release is too old, 2020).
+2. This plugin only supports Linux, and requires having latest
+   [fuse-archive](https://github.com/google/fuse-archive), [xxHash](https://github.com/Cyan4973/xxHash) and `fuse3` for linux, and [macfuse](https://github.com/macfuse/macfuse/releases) for macOS installed.
+   This fork requires you to build and install fuse-archive with latest
+   source from github (because the latest released version in some distros is too old, 2020).
 
 ## Installation
 
@@ -100,6 +115,19 @@ it will still prompt you to enter a password. You only need to enter the passwor
 
 - For other distros, it's better to use ChatGPT for dependencies. Prompt: `install fuse-archive YOUR_DISTRO_NAME`.
 
+- For macOS:
+
+  - You can install `macfuse` and `xxhash` with `brew install macfuse xxhash`.
+  - Then install `fuse-archive`:
+
+  ```sh
+  git clone https://github.com/google/fuse-archive
+  cd "fuse-archive"
+  sudo CXXFLAGS=-DFUSE_DARWIN_ENABLE_EXTENSIONS=0 make STD=gnu++20a install
+  ```
+
+- Fuse-archive also relies on the availability of the following filter programs: `base64`, `brotli`, `compress`, `lrzip`, `lzop` and `grzip` for supporting those compression formats.
+
 ### fuse-archive.yazi:
 
 ```sh
@@ -121,26 +149,33 @@ yazi instance:
   test -f ~/.config/yazi/plugins/fuse-archive.yazi/assets/yazi_fuse.fish; and source ~/.config/yazi/plugins/fuse-archive.yazi/assets/yazi_fuse.fish
   ```
 
-- For `bash` shell: add this command to `~/.bashrc` file:
+- For `bash` or `zsh` shell: add this command to `~/.bashrc` file:
 
   ```sh
   [[ -f ~/.config/yazi/plugins/fuse-archive.yazi/assets/yazi_fuse.sh ]] && . ~/.config/yazi/plugins/fuse-archive.yazi/assets/yazi_fuse.sh
   ```
 
-### Options
+### Setup options
 
 The plugin supports the following options, which can be assigned during setup:
 
-1. `smart_enter`: If `true`, when _entering_ a file it will be _opened_, while
+1. (optional) `smart_enter`: If `true`, when _entering_ a file it will be _opened_, while
    directories will always be _entered_. The default value is `false`.
+
+2. (optional) `excluded_extensions`: List of extensions that will be excluded from mounting.
+
+3. (optional) `mount_options`: String of mount options to be used when mounting the archive, separated by comma or space.
+   List of options: `fuse-archive -h`
 
 ```lua
 require("fuse-archive"):setup({
   smart_enter = true,
+  excluded_extensions = { "deb", "apk", "rpm" },
+  mount_options = "nocache,nosymlinks",
 })
 ```
 
-## Usage
+## Key mapping
 
 The plugin works transparently, so for the best effect, remap your navigation
 keys assigned to `enter` and `leave` to the plugin. This way you will be able
