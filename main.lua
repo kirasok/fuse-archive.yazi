@@ -117,9 +117,9 @@ end
 ---@return integer|nil, Output|nil
 local function run_command(cmd, args, _stdin)
 	local cwd = current_dir()
-	local stdin = _stdin or Command.INHERIT
+	local stdin = _stdin or Command.PIPED
 	local child, cmd_err =
-		Command(cmd):arg(args):cwd(cwd):stdin(stdin):stdout(Command.PIPED):stderr(Command.INHERIT):spawn()
+		Command(cmd):arg(args):cwd(cwd):stdin(stdin):stdout(Command.PIPED):stderr(Command.PIPED):spawn()
 
 	if not child then
 		error("Failed to start `%s` failed with error: %s", cmd, cmd_err)
