@@ -70,7 +70,7 @@ Using `excluded_extensions` option, you can exclude some extensions from mountin
 
 ### Support MacOS
 
-This plugin supports MacOS, but you need to install `fuse3` and `macfuse` first.
+This plugin supports MacOS, but you need to install `macfuse` instead of `fuse3`.
 
 ## Requirements
 
@@ -115,7 +115,7 @@ This plugin supports MacOS, but you need to install `fuse3` and `macfuse` first.
 
 - For other distros, it's better to use ChatGPT for dependencies. Prompt: `install fuse-archive YOUR_DISTRO_NAME`.
 
-- For macOS:
+- For macOS (only for fuse-archive >= v1.14):
 
   - You can install `macfuse` and `xxhash` with `brew install macfuse xxhash`.
   - Then install `fuse-archive`:
