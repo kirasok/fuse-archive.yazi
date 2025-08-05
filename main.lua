@@ -553,7 +553,7 @@ return {
 			local tmp_file = get_state(file, "tmp")
 			ya.emit("cd", { get_state(file, "cwd"), raw = true })
 
-			local cmd_err_code, res = run_command(shell, { "-c", "fusermount -u " .. path_quote(tmp_file) })
+			local cmd_err_code, res = run_command(shell, { "-c", "umount " .. path_quote(tmp_file) })
 			if cmd_err_code or res and not res.status.success then
 				error("Unable to unmount %s", tmp_file)
 			end
