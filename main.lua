@@ -269,6 +269,29 @@ local function show_ask_pw_dialog()
 	return cancelled, passphrase
 end
 
+local redirect_mounted_tab_to_home = ya.sync(function(state, _)
+	local mount_root_dir = get_state("global", "mount_root_dir")
+	local match_pattern = "^" .. is_literal_string(mount_root_dir .. "/yazi/fuse-archive") .. "/[^/]+%.tmp%.[^/]+$"
+	local HOME = os.getenv("HOME")
+
+	for _, tab in ipairs(cx.tabs) do
+		local dir = tab.current.cwd.name
+		local cwd = tostring(tab.current.cwd)
+
+		for archive, _ in pairs(state) do
+			if archive == dir and string.match(cwd, match_pattern) then
+				ya.emit("cd", {
+					HOME,
+					tab = (type(tab.id) == "number" or type(tab.id) == "string") and tab.id or tab.id.value,
+					raw = true,
+				})
+				goto continue
+			end
+		end
+		::continue::
+	end
+end)
+
 ---mount fuse
 ---@param opts {archive_path: Url, fuse_mount_point: Url, mount_options: string[], passphrase?: string, max_retry?: integer, retries?: integer}
 ---@return boolean
@@ -389,6 +412,7 @@ local function tmp_file_name(file_url)
 end
 
 local function unmount_on_quit()
+	redirect_mounted_tab_to_home()
 	local mount_root_dir = get_state("global", "mount_root_dir")
 	local unmount_script = path_quote(
 		os.getenv("HOME") .. "/.config/yazi/plugins/fuse-archive.yazi/assets/unmount_on_quit.sh"
