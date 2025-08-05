@@ -65,16 +65,33 @@ local get_state = ya.sync(function(state, archive, key)
 	end
 end)
 
+local function is_literal_string(str)
+	return str and str:gsub("([%^%$%(%)%%%.%[%]%*%+%-%?])", "%%%1")
+end
+
 local function path_quote(path)
+	if not path or path == "" then
+		return path
+	end
 	local result = "'" .. string.gsub(tostring(path), "'", "'\\''") .. "'"
 	return result
+end
+
+local function path_remove_trailing_slash(path)
+	if path == "/" then
+		return path
+	end
+	return (path:gsub("/$", ""))
 end
 
 local is_mount_point = ya.sync(function(state)
 	local dir = cx.active.current.cwd.name
 	local cwd = tostring(cx.active.current.cwd)
+	local mount_root_dir = get_state("global", "mount_root_dir")
+	local match_pattern = "^" .. is_literal_string(mount_root_dir .. "/yazi/fuse-archive") .. "/[^/]+%.tmp%.[^/]+$"
+
 	for archive, _ in pairs(state) do
-		if archive == dir and string.match(cwd, "^/tmp/yazi/fuse%-archive/[^/]+%.tmp%.[^/]+$") then
+		if archive == dir and string.match(cwd, match_pattern) then
 			return true
 		end
 	end
@@ -147,7 +164,8 @@ end
 ---Get the fuse mount point
 ---@return string|nil
 local fuse_dir = function()
-	local fuse_mount_point = "/tmp" .. "/yazi/fuse-archive"
+	local mount_root_dir = get_state("global", "mount_root_dir")
+	local fuse_mount_point = mount_root_dir .. "/yazi/fuse-archive"
 	local _, _, exit_code = os.execute("mkdir -p " .. ya.quote(fuse_mount_point))
 	if exit_code ~= 0 then
 		error("Cannot create mount point %s", fuse_mount_point)
@@ -357,7 +375,6 @@ local function mount_fuse(opts)
 end
 
 ---Mount path using inode (unique for each files)
----e.g. /tmp/yazi/fuse-archive/test.zip.tmp.11675995
 ---@param file_url Url
 ---@return string|nil
 local function tmp_file_name(file_url)
@@ -371,7 +388,25 @@ local function tmp_file_name(file_url)
 	return fname .. ".tmp." .. hashed_name
 end
 
+local function unmount_on_quit()
+	local mount_root_dir = get_state("global", "mount_root_dir")
+	local unmount_script = path_quote(
+		os.getenv("HOME") .. "/.config/yazi/plugins/fuse-archive.yazi/assets/unmount_on_quit.sh"
+	) .. " " .. path_quote(mount_root_dir)
+	os.execute("chmod +x " .. unmount_script)
+	os.execute(unmount_script)
+end
+
 local function setup(_, opts)
+	set_state(
+		"global",
+		"mount_root_dir",
+		opts
+				and opts.mount_root_dir
+				and type(opts.mount_root_dir) == "string"
+				and path_remove_trailing_slash(opts.mount_root_dir)
+			or "/tmp"
+	)
 	local fuse = fuse_dir()
 	set_state("global", "fuse_dir", fuse)
 	set_state("global", "smart_enter", opts and opts.smart_enter)
@@ -385,99 +420,27 @@ local function setup(_, opts)
 	end
 	set_state("global", "mount_options", mount_options)
 
+	-- stylua: ignore
 	local ORIGINAL_SUPPORTED_EXTENSIONS = {
-		"aia",
-		"jar",
-		"tbr",
-		"tlzip",
-		"tzs",
-		"tzstd",
-		"deb",
-		"7z",
-		"7zip",
-		"a",
-		"ar",
-		"apk",
-		"cab",
-		"cpio",
-		"iso",
-		"iso9660",
-		"jar",
-		"mtree",
-		"rar",
-		"rpm",
-		"tar",
-		"warc",
-		"xar",
-		"zip",
-		"zipx",
-		"crx",
-		"odf",
-		"odg",
-		"odp",
-		"ods",
-		"odt",
-		"docx",
-		"ppsx",
-		"pptx",
-		"xlsx",
-		"tb2",
-		"tbz",
-		"tbz2",
-		"tz2",
-		"tgz",
-		"tlz4",
-		"tlz",
-		"tlzma",
-		"txz",
-		"tz",
-		"taz",
-		"tzst",
-		"br",
-		"brotli",
-		"bz2",
-		"bzip2",
-		"grz",
-		"grzip",
-		"gz",
-		"gzip",
-		"lha",
-		"lrz",
-		"lrzip",
-		"lz4",
-		"lz",
-		"lzip",
-		"lzma",
-		"lzo",
-		"lzop",
-		"xz",
-		"z",
-		"zst",
+		"7z",       "7zip",     "a",        "aia",      "apk",
+		"ar",       "b64",      "base64",   "br",       "brotli",
+		"bz2",      "bzip2",    "cab",      "cpio",     "crx",
+		"deb",      "docx",     "grz",      "grzip",    "gz",
+		"gzip",     "iso",      "iso9660",  "jar",      "lha",
+		"lrz",      "lrzip",    "lz",       "lz4",      "lzip",
+		"lzma",     "lzo",      "lzop",     "mtree",    "odf",
+		"odg",      "odp",      "ods",      "odt",      "ppsx",
+		"pptx",     "rar",      "rpm",      "tar",      "tar.br",
+		"tar.brotli","tar.bz2", "tar.bzip2","tar.grz",  "tar.grzip",
+		"tar.gz",   "tar.gzip", "tar.lha",  "tar.lrz",  "tar.lrzip",
+		"tar.lz",   "tar.lz4",  "tar.lzip", "tar.lzma", "tar.lzo",
+		"tar.lzop", "tar.xz",   "tar.z",    "tar.zst",  "tar.zstd",
+		"taz",      "tb2",      "tbr",      "tbz",      "tbz2",
+		"tgz",      "tlz",      "tlz4",     "tlzip",    "tlzma",
+		"txz",      "tz",       "tz2",      "tzs",      "tzst",
+		"tzstd",    "uu",       "warc",     "xar",      "xlsx",
+		"xz",       "z",        "zip",      "zipx",     "zst",
 		"zstd",
-		"b64",
-		"base64",
-		"uu",
-		"tar.br",
-		"tar.brotli",
-		"tar.bz2",
-		"tar.bzip2",
-		"tar.grz",
-		"tar.grzip",
-		"tar.gz",
-		"tar.gzip",
-		"tar.lha",
-		"tar.lrz",
-		"tar.lrzip",
-		"tar.lz",
-		"tar.lz4",
-		"tar.lzip",
-		"tar.lzma",
-		"tar.lzo",
-		"tar.lzop",
-		"tar.xz",
-		"tar.z",
-		"tar.zst",
-		"tar.zstd",
 	}
 
 	local SET_ALLOWED_EXTENSIONS = tbl_to_set(ORIGINAL_SUPPORTED_EXTENSIONS)
@@ -498,6 +461,17 @@ local function setup(_, opts)
 		end
 	end
 	set_state("global", "valid_extensions", SET_ALLOWED_EXTENSIONS)
+
+	-- trigger unmount on quit
+	ps.sub("key-quit", function()
+		unmount_on_quit()
+	end)
+	ps.sub("emit-quit", function()
+		unmount_on_quit()
+	end)
+	ps.sub("emit-ind-quit", function()
+		unmount_on_quit()
+	end)
 end
 
 return {
@@ -545,19 +519,7 @@ return {
 			ya.emit("cd", { get_state(file, "cwd"), raw = true })
 			return
 		elseif action == "unmount" then
-			if not is_mount_point() then
-				ya.emit("leave", {})
-				return
-			end
-			local file = current_dir_name()
-			local tmp_file = get_state(file, "tmp")
-			ya.emit("cd", { get_state(file, "cwd"), raw = true })
-
-			local cmd_err_code, res = run_command(shell, { "-c", "umount " .. path_quote(tmp_file) })
-			if cmd_err_code or res and not res.status.success then
-				error("Unable to unmount %s", tmp_file)
-			end
-			return
+			unmount_on_quit()
 		end
 	end,
 	setup = setup,

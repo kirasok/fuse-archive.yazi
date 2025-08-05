@@ -140,22 +140,26 @@ Modify your `~/.config/yazi/init.lua` to include:
 require("fuse-archive"):setup()
 ```
 
-Install this shell script if you want yazi auto un-mount all mounted archives after closed the `last`
-yazi instance:
+Install this shell script if you want yazi auto un-mount all mounted archives after closed a shell process:
 
-- For `fish` shell: add this command to `~/.config/fish/config.fish` file:
+> [!IMPORTANT]
+>
+> This is unnecessary if you override and use `q` and `Q` key to quit yazi
+> But it doesn't hurt to to install this script
+
+- For `fish` shell, add this command to `~/.config/fish/config.fish` file:
 
   ```fish
   test -f ~/.config/yazi/plugins/fuse-archive.yazi/assets/yazi_fuse.fish; and source ~/.config/yazi/plugins/fuse-archive.yazi/assets/yazi_fuse.fish
   ```
 
-- For `bash` shell: add this command to `~/.bashrc` file:
+- For `bash` shell, add this command to `~/.bashrc` file:
 
   ```sh
   [[ -f ~/.config/yazi/plugins/fuse-archive.yazi/assets/yazi_fuse.sh ]] && . ~/.config/yazi/plugins/fuse-archive.yazi/assets/yazi_fuse.sh
   ```
 
-- For `zsh` shell: add this command to `~/.zshrc` file:
+- For `zsh` shell, add this command to `~/.zshrc` file:
 
   ```sh
   [[ -f ~/.config/yazi/plugins/fuse-archive.yazi/assets/yazi_fuse.sh ]] && . ~/.config/yazi/plugins/fuse-archive.yazi/assets/yazi_fuse.sh
@@ -170,10 +174,13 @@ The plugin supports the following options, which can be assigned during setup:
 
 2. (optional) `excluded_extensions`: A list of extensions that will be excluded from mounting.
 
-3. (optional) `extra_extensions`: A list of extensions to add to the supported mount list. This is useful if you want to mount an archive format that I may have missed or am unaware is supported by fuse-archive.
+3. (optional) `extra_extensions`: A list of extensions to add to the supported mount list.
+   This is useful if you want to mount an archive format that I may have missed or unawared it is supported by fuse-archive.
 
 4. (optional) `mount_options`: String of mount options to be used when mounting the archive, separated by comma or space.
    List of options: `fuse-archive -h`
+
+5. (optional) `mount_root_dir`: Full path of the directory where you want to mount the archive. Default is `/tmp`.
 
 ```lua
 require("fuse-archive"):setup({
@@ -181,6 +188,7 @@ require("fuse-archive"):setup({
   excluded_extensions = { "deb", "apk", "rpm" },
   extra_extensions = { "xyz" },
   mount_options = "nocache,nosymlinks",
+  mount_root_dir = os.getenv("HOME") .. "/abc_folder",
 })
 ```
 
@@ -203,17 +211,14 @@ prepend_keymap = [
     { on   = [ "<Left>" ], run = "plugin fuse-archive -- leave", desc = "Leave selected archive without unmount it" },
     { on   = [ "l" ], run = "plugin fuse-archive -- mount", desc = "Enter or Mount selected archive" },
     { on   = [ "h" ], run = "plugin fuse-archive -- leave", desc = "Leave selected archive without unmount it" },
+
+    # Over quit command for yazi <= v25.5.31. For nightly yazi, you don't need to add these lines.
+    { on   = [ "q" ], run = ["plugin fuse-archive -- unmount", "quit"], desc = "Quit the process" },
+    { on   = [ "Q" ], run = ["plugin fuse-archive -- unmount", "quit --no-cwd-file"], desc = "Quit without outputting cwd-file" },
+    # Or if you use project.yazi or other plugin that override quit command, just keep in mind to add unmount command before quit command.
+    { on   = [ "q" ], run = ["plugin fuse-archive -- unmount", "plugin projects -- quit"], desc = "Quit the process" },
 ]
 ```
-
-> [!IMPORTANT]
-> BREAKING CHANGE from this fork: `plugin fuse-archive -- unmount` in
-> keymap.toml should changed to `plugin fuse-archive -- leave`
-> to make multiple deep mount work. the
-> `unmount` still there if you want to unmount after leave the folder
-> (this won't let you copy/move files/folders to other place without create another
-> tab). But the downside of `leave` command is that the zip file won't unmount
-> itself after exit yazi, unless you use the fish or bash script which is mentioned in the #installation section.
 
 When the current file is not a supported archive type, the plugin simply calls
 _enter_, and when there is nothing to unmount, it calls _leave_, so it works
@@ -221,6 +226,8 @@ transparently.
 
 In case you run into any problems and need to unmount something manually, or
 delete any temporary directories, the location of the mounts is one of the
-following three in order of preference:
+following:
 
-1. `/tmp/yazi/fuse-archive/...`
+1. `/tmp/yazi/fuse-archive/...` by default.
+2. Or if you set `mount_root_dir` option in `setup()` function, it will be
+   `mount_root_dir/yazi/fuse-archive/...` in your `mount_root_dir` directory.
