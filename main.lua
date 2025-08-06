@@ -414,9 +414,10 @@ end
 local function unmount_on_quit()
 	redirect_mounted_tab_to_home()
 	local mount_root_dir = get_state("global", "mount_root_dir")
-	local unmount_script = os.getenv("HOME") .. "/.config/yazi/plugins/fuse-archive.yazi/assets/unmount_on_quit.sh"
-	run_command("chmod", { "+x", unmount_script })
-	run_command(unmount_script, { mount_root_dir })
+	local unmount_script =
+		path_quote(os.getenv("HOME") .. "/.config/yazi/plugins/fuse-archive.yazi/assets/unmount_on_quit.sh")
+	os.execute("chmod +x " .. unmount_script)
+	os.execute(unmount_script .. " " .. path_quote(mount_root_dir))
 end
 
 local function setup(_, opts)
@@ -485,14 +486,17 @@ local function setup(_, opts)
 	set_state("global", "valid_extensions", SET_ALLOWED_EXTENSIONS)
 
 	-- trigger unmount on quit
-	ps.sub("key-quit", function()
+	ps.sub("key-quit", function(args)
 		unmount_on_quit()
+		return args
 	end)
-	ps.sub("emit-quit", function()
+	ps.sub("emit-quit", function(args)
 		unmount_on_quit()
+		return args
 	end)
-	ps.sub("emit-ind-quit", function()
+	ps.sub("emit-ind-quit", function(args)
 		unmount_on_quit()
+		return args
 	end)
 end
 

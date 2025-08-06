@@ -190,7 +190,9 @@ prepend_keymap = [
     # Over quit command for yazi <= v25.5.31 to unmount on quit. For nightly yazi, you don't need to add these lines.
     { on   = [ "q" ], run = ["plugin fuse-archive -- unmount", "quit"], desc = "Quit the process" },
     { on   = [ "Q" ], run = ["plugin fuse-archive -- unmount", "quit --no-cwd-file"], desc = "Quit without outputting cwd-file" },
-    # Or if you use project.yazi or other plugin that override quit command, just keep in mind to add unmount command before quit command.
+
+    # Or if you use project.yazi or other plugin that call quit command internally, just keep in mind to add unmount command before quit command.
+    # Even with nightly yazi
     { on   = [ "q" ], run = ["plugin fuse-archive -- unmount", "plugin projects -- quit"], desc = "Quit the process" },
 ]
 ```
