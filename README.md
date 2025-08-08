@@ -174,8 +174,10 @@ keys assigned to `enter` and `leave` to the plugin. This way you will be able
 to "navigate" compressed archives as if they were part of the file system.
 
 When you _enter_ an archive, the plugin mounts it and takes you to the mounted
-directory, and when you _leave_, it unmounts the archive and takes you back to
-the original location of the archive.
+directory, and when you _leave_, it won't unmount the archive but takes you back to
+the original location of the archive. Normally it will unmount all mounted archive files
+when you use yazi >= 25.6.11 and use `quit` command to exit yazi. Or you can use a key mapping  
+of `-- unmount` action to unmount.
 
 Add this to your `~/.config/yazi/keymap.toml`:
 
