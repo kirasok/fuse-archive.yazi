@@ -115,7 +115,7 @@ This plugin supports MacOS, but you need to install `macfuse` instead of `fuse3`
 
 - For other distros, it's better to use ChatGPT for dependencies. Prompt: `install fuse-archive YOUR_DISTRO_NAME`.
 
-- For macOS (only for fuse-archive >= v1.14):
+- For macOS (only for fuse-archive >= v1.16):
 
   - You can install `macfuse` and `xxhash` with `brew install macfuse xxhash`.
   - Then install `fuse-archive`:
