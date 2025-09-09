@@ -88,7 +88,6 @@ This plugin supports MacOS, but you need to install `macfuse` instead of `fuse3`
 - For Ubuntu:
 
   Use `libfuse3-dev` instead of `libfuse-dev` if you are using Ubuntu 22.04 or later.
-
   - libfuse-dev: This is for FUSE 2.x, the older version.
   - libfuse3-dev: This is for FUSE 3.x, the newer and actively developed version.
     which is recommended by fuse-archive's author.
@@ -115,14 +114,14 @@ This plugin supports MacOS, but you need to install `macfuse` instead of `fuse3`
 
 - For other distros, it's better to use ChatGPT for dependencies. Prompt: `install fuse-archive YOUR_DISTRO_NAME`.
 
-- For macOS (only for fuse-archive >= v1.16):
-
+- For macOS (only for fuse-archive >= v1.17):
   - You can install `macfuse` and `xxhash` with `brew install macfuse xxhash`.
   - Then install `fuse-archive`:
 
   ```sh
   git clone https://github.com/google/fuse-archive
   cd "fuse-archive"
+  # Not tested yet, please confirm if it works.
   sudo CXXFLAGS=-DFUSE_DARWIN_ENABLE_EXTENSIONS=0 make STD=gnu++20a install
   ```
 

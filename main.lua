@@ -326,7 +326,7 @@ local function mount_fuse(opts)
 		:stdout(Command.PIPED)
 		:output()
 
-	local fuse_mount_res_code
+	local fuse_mount_res_code, fuse_mount_res_msg
 
 	-- already mounted, so stop re-mount
 	if res then
@@ -334,6 +334,7 @@ local function mount_fuse(opts)
 			return true
 		end
 		fuse_mount_res_code = res.status.code
+		fuse_mount_res_msg = res.stderr
 	end
 
 	if fuse_mount_res_code == FUSE_ARCHIVE_RETURN_CODE.SUCCESS then
@@ -375,9 +376,15 @@ local function mount_fuse(opts)
 	if retries >= max_retry or not ignore_global_error_notify then
 		if FUSE_ARCHIVE_MOUNT_ERROR_MSG[fuse_mount_res_code] then
 			if fuse_mount_res_code == FUSE_ARCHIVE_RETURN_CODE.ARCHIVE_READ_PERMISSION_INVALID then
-				local archive_ext = archive_path.ext
-				if archive_ext == "rar" then
+				if
+					archive_path.ext == "rar"
+					and fuse_mount_res_msg
+					and fuse_mount_res_msg:find("encrypted data is not currently supported", 1, true)
+				then
 					error("Password-protected RAR file is not supported yet!")
+					return false
+				elseif fuse_mount_res_msg and fuse_mount_res_msg:find("Unspecified error", 1, true) then
+					error("Cannot mount archive file, error: Unspecified error")
 					return false
 				end
 			end
