@@ -108,7 +108,7 @@ local current_file = ya.sync(function()
 end)
 
 local current_dir = ya.sync(function()
-	return tostring(cx.active.current.cwd)
+	return cx.active.current.cwd
 end)
 
 local current_dir_name = ya.sync(function()
@@ -134,6 +134,8 @@ end
 ---@return integer|nil, Output|nil
 local function run_command(cmd, args, _stdin)
 	local cwd = current_dir()
+	cwd = tostring(cwd.scheme and cwd.scheme.is_virtual and Url(cwd.scheme.cache .. tostring(cwd.path)).parent or cwd)
+
 	local stdin = _stdin or Command.PIPED
 	local child, cmd_err =
 		Command(cmd):arg(args):cwd(cwd):stdin(stdin):stdout(Command.PIPED):stderr(Command.PIPED):spawn()
@@ -524,6 +526,10 @@ return {
 				enter(hovered_url, is_dir)
 				return
 			end
+			hovered_url = hovered_url.scheme
+					and hovered_url.scheme.is_virtual
+					and Url(hovered_url.scheme.cache .. tostring(hovered_url.path))
+				or hovered_url
 			local tmp_fname = tmp_file_name(hovered_url)
 			if not tmp_fname then
 				return
@@ -537,7 +543,7 @@ return {
 					mount_options = get_state("global", "mount_options"),
 				})
 				if success then
-					set_state(tmp_fname, "cwd", current_dir())
+					set_state(tmp_fname, "cwd", tostring(current_dir()))
 					set_state(tmp_fname, "tmp", tostring(tmp_file_url))
 					ya.emit("cd", { tostring(tmp_file_url), raw = true })
 				end
