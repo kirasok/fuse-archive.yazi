@@ -518,6 +518,7 @@ return {
 
 		if action == "mount" then
 			local hovered_url, is_dir = current_file()
+			local hovered_url_raw = tostring(hovered_url)
 			if hovered_url == nil then
 				return
 			end
@@ -526,10 +527,12 @@ return {
 				enter(hovered_url, is_dir)
 				return
 			end
-			hovered_url = hovered_url.scheme
-					and hovered_url.scheme.is_virtual
-					and Url(hovered_url.scheme.cache .. tostring(hovered_url.path))
-				or hovered_url
+			local is_virtual = hovered_url.scheme and hovered_url.scheme.is_virtual
+			hovered_url = is_virtual and Url(hovered_url.scheme.cache .. tostring(hovered_url.path)) or hovered_url
+			if is_virtual and not fs.cha(hovered_url) then
+				ya.emit("download", { hovered_url_raw })
+				return
+			end
 			local tmp_fname = tmp_file_name(hovered_url)
 			if not tmp_fname then
 				return
