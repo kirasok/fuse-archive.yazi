@@ -7,7 +7,7 @@ if [ "$(pgrep -c yazi)" -le 1 ]; then
   # Loop through each mount point and force unmount
   while IFS= read -r mnt_point; do
     if [[ -n "$mnt_point" ]]; then
-      umount "$mnt_point"
+      fusermount -u "$mnt_point"
     fi
   done <<<"$fuse_archive_mnt_points"
 fi
