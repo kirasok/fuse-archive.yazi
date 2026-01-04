@@ -411,7 +411,7 @@ end
 ---@return string|nil
 local function tmp_file_name(file_url)
 	local fname = file_url.name
-	local cmd_err_code, res = run_command(shell, { "-c", "xxh128sum -q " .. path_quote(file_url) })
+	local cmd_err_code, res = run_command(shell, { "-c", "xxhsum -H2 -q " .. path_quote(file_url) })
 	if cmd_err_code or res == nil or res.status.code ~= 0 then
 		error("Cannot create unique path of file %s", fname)
 		return nil
