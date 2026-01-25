@@ -432,7 +432,6 @@ local function unmount_on_quit()
 	local mount_root_dir = get_state("global", "mount_root_dir")
 	local unmount_script =
 			path_quote(os.getenv("HOME") .. "/.config/yazi/plugins/fuse-archive.yazi/assets/unmount_on_quit.sh")
-	os.execute("chmod +x " .. unmount_script)
 	os.execute(unmount_script .. " " .. path_quote(mount_root_dir))
 end
 
