@@ -20,19 +20,19 @@ local FUSE_ARCHIVE_RETURN_CODE = {
 
 ---@enum FUSE_ARCHIVE_MOUNT_ERROR_MSG
 local FUSE_ARCHIVE_MOUNT_ERROR_MSG = {
-	[FUSE_ARCHIVE_RETURN_CODE.ERROR_GENERIC] = "Fuse-archive exited with error: %s",                                                                                                   -- Success.
-	[FUSE_ARCHIVE_RETURN_CODE.CREATE_MOUNT_POINT_FAILED] = "Can't create mount point %s, maybe you don't have permission",                                                             -- Success.
-	[FUSE_ARCHIVE_RETURN_CODE.OPEN_THE_ACHIVE_FILE_FAILED] = "Can't open archive file, maybe you don't have permission",                                                               -- Success.
+	[FUSE_ARCHIVE_RETURN_CODE.ERROR_GENERIC] = "Fuse-archive exited with error: %s",                                             -- Success.
+	[FUSE_ARCHIVE_RETURN_CODE.CREATE_MOUNT_POINT_FAILED] = "Can't create mount point %s, maybe you don't have permission",       -- Success.
+	[FUSE_ARCHIVE_RETURN_CODE.OPEN_THE_ACHIVE_FILE_FAILED] = "Can't open archive file, maybe you don't have permission",         -- Success.
 	[FUSE_ARCHIVE_RETURN_CODE.CREATE_CACHE_FILE_FAILED] =
-	"Can't not create cache point or not enough space for cache, trying to disable cache opt, this would make thing much slower",                                                      -- Success.
+	"Can't not create cache point or not enough space for cache, trying to disable cache opt, this would make thing much slower", -- Success.
 	[FUSE_ARCHIVE_RETURN_CODE.NOT_ENOUGH_TEMP_SPACE] =
-	"Can't not create cache point or not enough space for cache, trying to disable cache opt, this would make thing much slower",                                                      -- Success.
-	[FUSE_ARCHIVE_RETURN_CODE.ENCRYPTED_METHOD_UNSUPPORTED] = "Encrypted method is unsupported",                                                                                       -- Success.
-	[FUSE_ARCHIVE_RETURN_CODE.ENCRYPTED_FILE_BUT_WRONG_PASSWORD] = "Incorrect password, %s attempts remaining.",                                                                       -- Success.
+	"Can't not create cache point or not enough space for cache, trying to disable cache opt, this would make thing much slower", -- Success.
+	[FUSE_ARCHIVE_RETURN_CODE.ENCRYPTED_METHOD_UNSUPPORTED] = "Encrypted method is unsupported",                                 -- Success.
+	[FUSE_ARCHIVE_RETURN_CODE.ENCRYPTED_FILE_BUT_WRONG_PASSWORD] = "Incorrect password, %s attempts remaining.",                 -- Success.
 	[FUSE_ARCHIVE_RETURN_CODE.ENCRYPTED_FILE_BUT_NOT_PASSWORD] =
-	"Please enter password to unlock file,%s attempts remaining.",                                                                                                                     -- Success.
-	[FUSE_ARCHIVE_RETURN_CODE.ARCHIVE_FORMAT_UNSUPPORTED] = "Unsupported this format file",                                                                                            -- Success.
-	[FUSE_ARCHIVE_RETURN_CODE.ARCHIVE_HEADER_INVALID] = "Archive file is corrupted",                                                                                                   -- Success.
+	"Please enter password to unlock file,%s attempts remaining.",                                                               -- Success.
+	[FUSE_ARCHIVE_RETURN_CODE.ARCHIVE_FORMAT_UNSUPPORTED] = "Unsupported this format file",                                      -- Success.
+	[FUSE_ARCHIVE_RETURN_CODE.ARCHIVE_HEADER_INVALID] = "Archive file is corrupted",                                             -- Success.
 	[FUSE_ARCHIVE_RETURN_CODE.ARCHIVE_READ_PERMISSION_INVALID] = "Can't open archive file, maybe you don't have permission",
 }
 ---@enum YA_INPUT_EVENT
@@ -415,16 +415,11 @@ end
 
 ---Mount path using inode (unique for each files)
 ---@param file_url Url
----@return string|nil
+---@return string
 local function tmp_file_name(file_url)
 	local fname = file_url.name
-	local cmd_err_code, res = run_command(shell, { "-c", "xxhsum -H2 -q " .. path_quote(file_url) })
-	if cmd_err_code or res == nil or res.status.code ~= 0 then
-		error("Cannot create unique path of file %s", fname)
-		return nil
-	end
-	local hashed_name = res.stdout:match("^(%S+)")
-	return fname .. ".tmp." .. hashed_name
+	local hash = ya.hash(file_url.name)
+	return fname .. ".tmp." .. hash
 end
 
 local function unmount_on_quit()
@@ -540,9 +535,6 @@ return {
 				return
 			end
 			local tmp_fname = tmp_file_name(hovered_url)
-			if not tmp_fname then
-				return
-			end
 			local tmp_file_url = get_mount_url(tmp_fname)
 
 			if tmp_file_url then

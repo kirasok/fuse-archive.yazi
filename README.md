@@ -77,7 +77,7 @@ This plugin supports MacOS, but you need to install `macfuse` instead of `fuse3`
 1. [yazi](https://github.com/sxyazi/yazi).
 
 2. This plugin only supports Linux and MacOS, and requires having latest
-   [fuse-archive](https://github.com/google/fuse-archive), [xxHash](https://github.com/Cyan4973/xxHash) and `fuse3` for linux, and [macfuse](https://github.com/macfuse/macfuse/releases) for macOS installed.
+   [fuse-archive](https://github.com/google/fuse-archive) and `fuse3` for linux, and [macfuse](https://github.com/macfuse/macfuse/releases) for macOS installed.
    This fork requires you to build and install fuse-archive with latest
    source from github (because the latest released version in some distros is too old, 2020).
 
@@ -93,7 +93,7 @@ This plugin supports MacOS, but you need to install `macfuse` instead of `fuse3`
     which is recommended by fuse-archive's author.
 
   ```sh
-  sudo apt install git cmake g++ pkg-config libfuse3-dev libarchive-dev libboost-all-dev xxhash fuse3
+  sudo apt install git cmake g++ pkg-config libfuse3-dev libarchive-dev libboost-all-dev fuse3
   git clone https://github.com/google/fuse-archive
   cd "fuse-archive"
   sudo make install
@@ -102,9 +102,9 @@ This plugin supports MacOS, but you need to install `macfuse` instead of `fuse3`
 - For Arch based:
 
   ```sh
-  yay -S xxhash fuse3 fuse-archive
+  yay -S fuse3 fuse-archive
 
-  # or: paru -S xxhash fuse3 fuse-archive
+  # or: paru -S fuse3 fuse-archive
 
   # Or: install fuse-archive from source:
   # git clone https://github.com/google/fuse-archive
@@ -115,7 +115,7 @@ This plugin supports MacOS, but you need to install `macfuse` instead of `fuse3`
 - For other distros, it's better to use ChatGPT for dependencies. Prompt: `install fuse-archive YOUR_DISTRO_NAME`.
 
 - For macOS (only for fuse-archive >= v1.17):
-  - You can install `macfuse` and `xxhash` with `brew install macfuse xxhash`.
+  - You can install `macfuse` with `brew install macfuse`.
   - Then install `fuse-archive`:
 
   ```sh
