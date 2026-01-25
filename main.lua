@@ -176,9 +176,9 @@ end
 ---@return string|nil
 local fuse_dir = function()
 	local mountdir = getmountdir()
-	local _, _, exit_code = os.execute("mkdir -p " .. ya.quote(mountdir))
-	if exit_code ~= 0 then
-		error("Cannot create mount point %s", mountdir)
+	local ok, err = fs.create("dir_all", Url(mountdir))
+	if not ok then
+		error("Cannot create mount point %s, error: %s", mountdir, err)
 		return
 	end
 	return mountdir
