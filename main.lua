@@ -317,7 +317,7 @@ local function mount_fuse(opts)
 	if is_mounted(opts.fuse_mount_point) then
 		return true
 	end
-	local _mount_opts = tbl_unique_strings({ "auto_unmount", table.unpack(mount_options) })
+	local _mount_opts = tbl_unique_strings(mount_options)
 
 	local res, _ = Command(shell)
 			:arg({
