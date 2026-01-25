@@ -3,33 +3,36 @@
 local shell = os.getenv("SHELL") or ""
 ---@enum FUSE_ARCHIVE_RETURN_CODE
 local FUSE_ARCHIVE_RETURN_CODE = {
-	SUCCESS = 0, -- Success.
-	ERROR_GENERIC = 1, -- Generic error code for: missing command line argument, \
+	SUCCESS = 0,                           -- Success.
+	ERROR_GENERIC = 1,                     -- Generic error code for: missing command line argument, \
 	-- too many command line arguments, unknown option, mount point is not empty, etc.
-	CREATE_MOUNT_POINT_FAILED = 10, -- Cannot create the mount point.
-	OPEN_THE_ACHIVE_FILE_FAILED = 11, -- Cannot open the archive file.
-	CREATE_CACHE_FILE_FAILED = 12, -- Cannot create the cache file.
-	NOT_ENOUGH_TEMP_SPACE = 13, -- Cannot write to the cache file. This is most likely the indication that there is not enough temp space.
-	ENCRYPTED_FILE_BUT_NOT_PASSWORD = 20, -- The archive contains an encrypted file, but no password was provided.
+	CREATE_MOUNT_POINT_FAILED = 10,        -- Cannot create the mount point.
+	OPEN_THE_ACHIVE_FILE_FAILED = 11,      -- Cannot open the archive file.
+	CREATE_CACHE_FILE_FAILED = 12,         -- Cannot create the cache file.
+	NOT_ENOUGH_TEMP_SPACE = 13,            -- Cannot write to the cache file. This is most likely the indication that there is not enough temp space.
+	ENCRYPTED_FILE_BUT_NOT_PASSWORD = 20,  -- The archive contains an encrypted file, but no password was provided.
 	ENCRYPTED_FILE_BUT_WRONG_PASSWORD = 21, -- The archive contains an encrypted file, and the provided password does not decrypt it.
-	ENCRYPTED_METHOD_UNSUPPORTED = 22, -- The archive contains an encrypted file, and the encryption method is not supported.
-	ARCHIVE_FORMAT_UNSUPPORTED = 30, -- Cannot recognize the archive format.
-	ARCHIVE_HEADER_INVALID = 31, -- Invalid archive header.
-	ARCHIVE_READ_PERMISSION_INVALID = 32, -- Cannot read and extract the archive.
+	ENCRYPTED_METHOD_UNSUPPORTED = 22,     -- The archive contains an encrypted file, and the encryption method is not supported.
+	ARCHIVE_FORMAT_UNSUPPORTED = 30,       -- Cannot recognize the archive format.
+	ARCHIVE_HEADER_INVALID = 31,           -- Invalid archive header.
+	ARCHIVE_READ_PERMISSION_INVALID = 32,  -- Cannot read and extract the archive.
 }
 
 ---@enum FUSE_ARCHIVE_MOUNT_ERROR_MSG
 local FUSE_ARCHIVE_MOUNT_ERROR_MSG = {
-	[FUSE_ARCHIVE_RETURN_CODE.ERROR_GENERIC] = "Fuse-archive exited with error: %s", -- Success.
-	[FUSE_ARCHIVE_RETURN_CODE.CREATE_MOUNT_POINT_FAILED] = "Can't create mount point %s, maybe you don't have permission", -- Success.
-	[FUSE_ARCHIVE_RETURN_CODE.OPEN_THE_ACHIVE_FILE_FAILED] = "Can't open archive file, maybe you don't have permission", -- Success.
-	[FUSE_ARCHIVE_RETURN_CODE.CREATE_CACHE_FILE_FAILED] = "Can't not create cache point or not enough space for cache, trying to disable cache opt, this would make thing much slower", -- Success.
-	[FUSE_ARCHIVE_RETURN_CODE.NOT_ENOUGH_TEMP_SPACE] = "Can't not create cache point or not enough space for cache, trying to disable cache opt, this would make thing much slower", -- Success.
-	[FUSE_ARCHIVE_RETURN_CODE.ENCRYPTED_METHOD_UNSUPPORTED] = "Encrypted method is unsupported", -- Success.
-	[FUSE_ARCHIVE_RETURN_CODE.ENCRYPTED_FILE_BUT_WRONG_PASSWORD] = "Incorrect password, %s attempts remaining.", -- Success.
-	[FUSE_ARCHIVE_RETURN_CODE.ENCRYPTED_FILE_BUT_NOT_PASSWORD] = "Please enter password to unlock file,%s attempts remaining.", -- Success.
-	[FUSE_ARCHIVE_RETURN_CODE.ARCHIVE_FORMAT_UNSUPPORTED] = "Unsupported this format file", -- Success.
-	[FUSE_ARCHIVE_RETURN_CODE.ARCHIVE_HEADER_INVALID] = "Archive file is corrupted", -- Success.
+	[FUSE_ARCHIVE_RETURN_CODE.ERROR_GENERIC] = "Fuse-archive exited with error: %s",                                                                                                   -- Success.
+	[FUSE_ARCHIVE_RETURN_CODE.CREATE_MOUNT_POINT_FAILED] = "Can't create mount point %s, maybe you don't have permission",                                                             -- Success.
+	[FUSE_ARCHIVE_RETURN_CODE.OPEN_THE_ACHIVE_FILE_FAILED] = "Can't open archive file, maybe you don't have permission",                                                               -- Success.
+	[FUSE_ARCHIVE_RETURN_CODE.CREATE_CACHE_FILE_FAILED] =
+	"Can't not create cache point or not enough space for cache, trying to disable cache opt, this would make thing much slower",                                                      -- Success.
+	[FUSE_ARCHIVE_RETURN_CODE.NOT_ENOUGH_TEMP_SPACE] =
+	"Can't not create cache point or not enough space for cache, trying to disable cache opt, this would make thing much slower",                                                      -- Success.
+	[FUSE_ARCHIVE_RETURN_CODE.ENCRYPTED_METHOD_UNSUPPORTED] = "Encrypted method is unsupported",                                                                                       -- Success.
+	[FUSE_ARCHIVE_RETURN_CODE.ENCRYPTED_FILE_BUT_WRONG_PASSWORD] = "Incorrect password, %s attempts remaining.",                                                                       -- Success.
+	[FUSE_ARCHIVE_RETURN_CODE.ENCRYPTED_FILE_BUT_NOT_PASSWORD] =
+	"Please enter password to unlock file,%s attempts remaining.",                                                                                                                     -- Success.
+	[FUSE_ARCHIVE_RETURN_CODE.ARCHIVE_FORMAT_UNSUPPORTED] = "Unsupported this format file",                                                                                            -- Success.
+	[FUSE_ARCHIVE_RETURN_CODE.ARCHIVE_HEADER_INVALID] = "Archive file is corrupted",                                                                                                   -- Success.
 	[FUSE_ARCHIVE_RETURN_CODE.ARCHIVE_READ_PERMISSION_INVALID] = "Can't open archive file, maybe you don't have permission",
 }
 ---@enum YA_INPUT_EVENT
@@ -85,10 +88,10 @@ local function path_remove_trailing_slash(path)
 end
 
 local function getmountdir()
-  local username = os.getenv("USER") or ""
-  local mount_root_dir = get_state("global", "mount_root_dir")
-  local mountdir = string.format("/yazi.%s/fuse-archive", username)
-  return mount_root_dir .. mountdir
+	local username = os.getenv("USER") or ""
+	local mount_root_dir = get_state("global", "mount_root_dir")
+	local mountdir = string.format("/yazi.%s/fuse-archive", username)
+	return mount_root_dir .. mountdir
 end
 
 local is_mount_point = ya.sync(function(state)
@@ -144,7 +147,7 @@ local function run_command(cmd, args, _stdin)
 
 	local stdin = _stdin or Command.PIPED
 	local child, cmd_err =
-		Command(cmd):arg(args):cwd(cwd):stdin(stdin):stdout(Command.PIPED):stderr(Command.PIPED):spawn()
+			Command(cmd):arg(args):cwd(cwd):stdin(stdin):stdout(Command.PIPED):stderr(Command.PIPED):spawn()
 
 	if not child then
 		error("Failed to start `%s` failed with error: %s", cmd, cmd_err)
@@ -172,7 +175,7 @@ end
 ---Get the fuse mount point
 ---@return string|nil
 local fuse_dir = function()
-  local mountdir = getmountdir()
+	local mountdir = getmountdir()
 	local _, _, exit_code = os.execute("mkdir -p " .. ya.quote(mountdir))
 	if exit_code ~= 0 then
 		error("Cannot create mount point %s", mountdir)
@@ -317,20 +320,20 @@ local function mount_fuse(opts)
 	local _mount_opts = tbl_unique_strings({ "auto_unmount", table.unpack(mount_options) })
 
 	local res, _ = Command(shell)
-		:arg({
-			"-c",
-			(passphrase and "printf '%s\n' " .. path_quote(passphrase) .. " | " or "")
+			:arg({
+				"-c",
+				(passphrase and "printf '%s\n' " .. path_quote(passphrase) .. " | " or "")
 				.. " fuse-archive -o "
 				.. table.concat(_mount_opts, ",")
 				.. " "
 				.. path_quote(archive_path)
 				.. " "
 				.. path_quote(fuse_mount_point),
-		})
-		-- :stdin(passpharase_stdin)
-		:stderr(Command.PIPED)
-		:stdout(Command.PIPED)
-		:output()
+			})
+			-- :stdin(passpharase_stdin)
+			:stderr(Command.PIPED)
+			:stdout(Command.PIPED)
+			:output()
 
 	local fuse_mount_res_code, fuse_mount_res_msg
 
@@ -350,14 +353,14 @@ local function mount_fuse(opts)
 	elseif fuse_mount_res_code == FUSE_ARCHIVE_RETURN_CODE.CREATE_MOUNT_POINT_FAILED then
 		payload_error_notify = { fuse_mount_point }
 	elseif
-		fuse_mount_res_code == FUSE_ARCHIVE_RETURN_CODE.NOT_ENOUGH_TEMP_SPACE
-		or fuse_mount_res_code == FUSE_ARCHIVE_RETURN_CODE.CREATE_CACHE_FILE_FAILED
+			fuse_mount_res_code == FUSE_ARCHIVE_RETURN_CODE.NOT_ENOUGH_TEMP_SPACE
+			or fuse_mount_res_code == FUSE_ARCHIVE_RETURN_CODE.CREATE_CACHE_FILE_FAILED
 	then
 		-- disable cache
 		table.insert(mount_options, "nocache")
 	elseif
-		fuse_mount_res_code == FUSE_ARCHIVE_RETURN_CODE.ENCRYPTED_FILE_BUT_NOT_PASSWORD
-		or fuse_mount_res_code == FUSE_ARCHIVE_RETURN_CODE.ENCRYPTED_FILE_BUT_WRONG_PASSWORD
+			fuse_mount_res_code == FUSE_ARCHIVE_RETURN_CODE.ENCRYPTED_FILE_BUT_NOT_PASSWORD
+			or fuse_mount_res_code == FUSE_ARCHIVE_RETURN_CODE.ENCRYPTED_FILE_BUT_WRONG_PASSWORD
 	then
 		ignore_global_error_notify = true
 		-- Too many attempts
@@ -383,9 +386,9 @@ local function mount_fuse(opts)
 		if FUSE_ARCHIVE_MOUNT_ERROR_MSG[fuse_mount_res_code] then
 			if fuse_mount_res_code == FUSE_ARCHIVE_RETURN_CODE.ARCHIVE_READ_PERMISSION_INVALID then
 				if
-					archive_path.ext == "rar"
-					and fuse_mount_res_msg
-					and fuse_mount_res_msg:find("encrypted data is not currently supported", 1, true)
+						archive_path.ext == "rar"
+						and fuse_mount_res_msg
+						and fuse_mount_res_msg:find("encrypted data is not currently supported", 1, true)
 				then
 					error("Password-protected RAR file is not supported yet!")
 					return false
@@ -428,7 +431,7 @@ local function unmount_on_quit()
 	redirect_mounted_tab_to_home()
 	local mount_root_dir = get_state("global", "mount_root_dir")
 	local unmount_script =
-		path_quote(os.getenv("HOME") .. "/.config/yazi/plugins/fuse-archive.yazi/assets/unmount_on_quit.sh")
+			path_quote(os.getenv("HOME") .. "/.config/yazi/plugins/fuse-archive.yazi/assets/unmount_on_quit.sh")
 	os.execute("chmod +x " .. unmount_script)
 	os.execute(unmount_script .. " " .. path_quote(mount_root_dir))
 end
@@ -438,10 +441,10 @@ local function setup(_, opts)
 		"global",
 		"mount_root_dir",
 		opts
-				and opts.mount_root_dir
-				and type(opts.mount_root_dir) == "string"
-				and path_remove_trailing_slash(opts.mount_root_dir)
-			or "/tmp"
+		and opts.mount_root_dir
+		and type(opts.mount_root_dir) == "string"
+		and path_remove_trailing_slash(opts.mount_root_dir)
+		or "/tmp"
 	)
 	local fuse = fuse_dir()
 	set_state("global", "fuse_dir", fuse)
@@ -458,24 +461,24 @@ local function setup(_, opts)
 
 	-- stylua: ignore
 	local ORIGINAL_SUPPORTED_EXTENSIONS = {
-		"7z",       "7zip",     "a",        "aia",      "apk",
-		"ar",       "b64",      "base64",   "br",       "brotli",
-		"bz2",      "bzip2",    "cab",      "cpio",     "crx",
-		"deb",      "docx",     "grz",      "grzip",    "gz",
-		"gzip",     "iso",      "iso9660",  "jar",      "lha",
-		"lrz",      "lrzip",    "lz",       "lz4",      "lzip",
-		"lzma",     "lzo",      "lzop",     "mtree",    "odf",
-		"odg",      "odp",      "ods",      "odt",      "ppsx",
-		"pptx",     "rar",      "rpm",      "tar",      "tar.br",
-		"tar.brotli","tar.bz2", "tar.bzip2","tar.grz",  "tar.grzip",
-		"tar.gz",   "tar.gzip", "tar.lha",  "tar.lrz",  "tar.lrzip",
-		"tar.lz",   "tar.lz4",  "tar.lzip", "tar.lzma", "tar.lzo",
-		"tar.lzop", "tar.xz",   "tar.z",    "tar.zst",  "tar.zstd",
-		"taz",      "tb2",      "tbr",      "tbz",      "tbz2",
-		"tgz",      "tlz",      "tlz4",     "tlzip",    "tlzma",
-		"txz",      "tz",       "tz2",      "tzs",      "tzst",
-		"tzstd",    "uu",       "warc",     "xar",      "xlsx",
-		"xz",       "z",        "zip",      "zipx",     "zst",
+		"7z", "7zip", "a", "aia", "apk",
+		"ar", "b64", "base64", "br", "brotli",
+		"bz2", "bzip2", "cab", "cpio", "crx",
+		"deb", "docx", "grz", "grzip", "gz",
+		"gzip", "iso", "iso9660", "jar", "lha",
+		"lrz", "lrzip", "lz", "lz4", "lzip",
+		"lzma", "lzo", "lzop", "mtree", "odf",
+		"odg", "odp", "ods", "odt", "ppsx",
+		"pptx", "rar", "rpm", "tar", "tar.br",
+		"tar.brotli", "tar.bz2", "tar.bzip2", "tar.grz", "tar.grzip",
+		"tar.gz", "tar.gzip", "tar.lha", "tar.lrz", "tar.lrzip",
+		"tar.lz", "tar.lz4", "tar.lzip", "tar.lzma", "tar.lzo",
+		"tar.lzop", "tar.xz", "tar.z", "tar.zst", "tar.zstd",
+		"taz", "tb2", "tbr", "tbz", "tbz2",
+		"tgz", "tlz", "tlz4", "tlzip", "tlzma",
+		"txz", "tz", "tz2", "tzs", "tzst",
+		"tzstd", "uu", "warc", "xar", "xlsx",
+		"xz", "z", "zip", "zipx", "zst",
 		"zstd",
 	}
 
