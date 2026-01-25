@@ -164,7 +164,7 @@ local function run_command(cmd, args, _stdin)
 end
 
 local is_mounted = function(dir_path)
-	local cmd_err_code, res = run_command(shell, { "-c", "mountpoint -q " .. path_quote(dir_path) })
+	local cmd_err_code, res = run_command("mountpoint", { "-q ", path_quote(dir_path) })
 	if cmd_err_code or res == nil or res.status.code ~= 0 then
 		-- case error, or mountpoint command not found
 		return false
