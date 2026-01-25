@@ -9,6 +9,60 @@ function Log.info(s, ...)
 	ya.notify({ title = "fuse-archive", content = string.format(s, ...), timeout = 3, level = "info" })
 end
 
+--- Copies a table recursively
+---@generic T: table
+---@param tbl T
+---@return T
+function table.deep_copy(tbl)
+	local copy = {}
+	for k, v in pairs(tbl) do
+		if type(v) == "table" then
+			copy[k] = table.deep_copy(v)
+			setmetatable(copy[k], getmetatable(v))
+		else
+			copy[k] = v
+		end
+	end
+	return copy
+end
+
+---@class fuse-archive.Set
+local Set = {
+	__name = "fuse-archive.Set"
+}
+
+--- Create set from table of values
+--- Keys are discarded
+---@param tbl any[]
+---@return fuse-archive.Set
+function Set.from_table(tbl)
+	local set = {}
+	for _, v in pairs(tbl) do
+		set[v] = true
+	end
+	return setmetatable(set, Set)
+end
+
+--- Return a union of two sets
+---@param other fuse-archive.Set
+function Set:__bor(other)
+	local combined = table.deep_copy(self)
+	for k, _ in pairs(other) do
+		combined[k] = other[k] or combined[k]
+	end
+	return combined
+end
+
+--- Return self \ other; a relative complement of other in respect to self
+---@param other fuse-archive.Set
+function Set:__shl(other)
+	local combined = table.deep_copy(self)
+	for k, _ in pairs(other) do
+		combined[k] = other[k] and false
+	end
+	return combined
+end
+
 ---@enum FUSE_ARCHIVE_RETURN_CODE
 local FUSE_ARCHIVE_RETURN_CODE = {
 	SUCCESS = 0,                           -- Success.
@@ -215,36 +269,6 @@ local function tbl_unique_strings(tbl)
 	end
 
 	return unique_table
-end
-
-local function tbl_to_set(t1)
-	local set = {}
-
-	for _, v in ipairs(t1) do
-		set[v] = true
-	end
-
-	return set
-end
-
-local function remove_from_set(set, t2)
-	if not set then
-		set = {}
-	end
-	for _, v in ipairs(t2) do
-		set[v] = nil
-	end
-	return set
-end
-
-local function add_to_set(set, t2)
-	if not set then
-		set = {}
-	end
-	for _, v in ipairs(t2) do
-		set[v] = true
-	end
-	return set
 end
 
 ---@param tmp_file_name string tmp file name
@@ -476,11 +500,11 @@ local function setup(_, opts)
 		"zstd",
 	}
 
-	local SET_ALLOWED_EXTENSIONS = tbl_to_set(ORIGINAL_SUPPORTED_EXTENSIONS)
+	local SET_ALLOWED_EXTENSIONS = Set.from_table(ORIGINAL_SUPPORTED_EXTENSIONS)
 
 	if opts and opts.extra_extensions then
 		if type(opts.extra_extensions) == "table" then
-			SET_ALLOWED_EXTENSIONS = add_to_set(SET_ALLOWED_EXTENSIONS, opts.extra_extensions)
+			SET_ALLOWED_EXTENSIONS = SET_ALLOWED_EXTENSIONS | Set.from_table(opts.extra_extensions)
 		else
 			error("extra_extensions option in setup() must be a table of string")
 		end
@@ -488,7 +512,7 @@ local function setup(_, opts)
 
 	if opts and opts.excluded_extensions then
 		if type(opts.excluded_extensions) == "table" then
-			SET_ALLOWED_EXTENSIONS = remove_from_set(SET_ALLOWED_EXTENSIONS, opts.excluded_extensions)
+			SET_ALLOWED_EXTENSIONS = SET_ALLOWED_EXTENSIONS << Set.from_table(opts.excluded_extensions)
 		else
 			error("excluded_extensions option in setup() must be a table of string")
 		end
