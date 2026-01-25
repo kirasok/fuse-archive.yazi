@@ -260,30 +260,14 @@ end
 ---Show password input dialog
 ---@return boolean cancelled, string password
 local function show_ask_pw_dialog()
-	local passphrase = ""
-	local cancelled = false
 	-- Asking user to input the password
-	local input_pw = ya.input({
+	local input_pw, event = ya.input({
 		title = "Enter password to unlock:",
 		obscure = true,
 		pos = { "center", x = 0, y = 0, w = 50, h = 3 },
 		position = { "center", x = 0, y = 0, w = 50, h = 3 },
-		realtime = true,
 	})
-
-	while true and input_pw do
-		---@type string, YA_INPUT_EVENT
-		local value, ev = input_pw:recv()
-		if ev == YA_INPUT_EVENT.CONFIRMED then
-			passphrase = value or ""
-			break
-		elseif ev == YA_INPUT_EVENT.CANCELLED then
-			passphrase = ""
-			cancelled = true
-			break
-		end
-	end
-	return cancelled, passphrase
+	return event ~= YA_INPUT_EVENT.CONFIRMED, input_pw or ""
 end
 
 ---@type fun()
