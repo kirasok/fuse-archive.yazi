@@ -1,6 +1,5 @@
 --- @since 25.5.31
 
-local shell = os.getenv("SHELL") or ""
 ---@enum FUSE_ARCHIVE_RETURN_CODE
 local FUSE_ARCHIVE_RETURN_CODE = {
 	SUCCESS = 0,                           -- Success.
@@ -317,18 +316,11 @@ local function mount_fuse(opts)
 	if is_mounted(opts.fuse_mount_point) then
 		return true
 	end
-	local _mount_opts = tbl_unique_strings(mount_options)
 
-	local res, _ = Command(shell)
+	local res, _ = Command("fuse-archive")
 			:arg({
-				"-c",
-				(passphrase and "printf '%s\n' " .. path_quote(passphrase) .. " | " or "")
-				.. " fuse-archive -o "
-				.. table.concat(_mount_opts, ",")
-				.. " "
-				.. path_quote(archive_path)
-				.. " "
-				.. path_quote(fuse_mount_point),
+				tostring(archive_path),
+				tostring(fuse_mount_point),
 			})
 			-- :stdin(passpharase_stdin)
 			:stderr(Command.PIPED)
