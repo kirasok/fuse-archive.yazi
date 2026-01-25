@@ -317,11 +317,17 @@ local function mount_fuse(opts)
 		return true
 	end
 
+	local args = {
+		tostring(archive_path),
+		tostring(fuse_mount_point),
+	}
+	if opts.mount_options and #opts.mount_options > 0 then
+		table.insert(args, 1,
+			" -o " .. tbl_unique_strings(opts.mount_options)
+		)
+	end
 	local res, _ = Command("fuse-archive")
-			:arg({
-				tostring(archive_path),
-				tostring(fuse_mount_point),
-			})
+			:arg(args)
 			-- :stdin(passpharase_stdin)
 			:stderr(Command.PIPED)
 			:stdout(Command.PIPED)
