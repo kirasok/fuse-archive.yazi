@@ -1,5 +1,13 @@
 --- @since 25.5.31
 
+local Log = {}
+function Log.error(s, ...)
+	ya.notify({ title = "fuse-archive", content = string.format(s, ...), timeout = 3, level = "error" })
+end
+function Log.info(s, ...)
+	ya.notify({ title = "fuse-archive", content = string.format(s, ...), timeout = 3, level = "info" })
+end
+
 ---@enum FUSE_ARCHIVE_RETURN_CODE
 local FUSE_ARCHIVE_RETURN_CODE = {
 	SUCCESS = 0,                           -- Success.
@@ -41,14 +49,6 @@ local YA_INPUT_EVENT = {
 	CANCELLED = 2,
 	VALUE_CHANGED = 3,
 }
-
-local function error(s, ...)
-	ya.notify({ title = "fuse-archive", content = string.format(s, ...), timeout = 3, level = "error" })
-end
-
-local function info(s, ...)
-	ya.notify({ title = "fuse-archive", content = string.format(s, ...), timeout = 3, level = "info" })
-end
 
 local set_state = ya.sync(function(state, archive, key, value)
 	if state[archive] then
@@ -149,13 +149,13 @@ local function run_command(cmd, args, _stdin)
 			Command(cmd):arg(args):cwd(cwd):stdin(stdin):stdout(Command.PIPED):stderr(Command.PIPED):spawn()
 
 	if not child then
-		error("Failed to start `%s` failed with error: %s", cmd, cmd_err)
+		Log.error("Failed to start `%s` failed with error: %s", cmd, cmd_err)
 		return cmd_err, nil
 	end
 
 	local output, out_err = child:wait_with_output()
 	if not output then
-		error("Cannot read `%s` output, error: %s", cmd, out_err)
+		Log.error("Cannot read `%s` output, error: %s", cmd, out_err)
 		return out_err, nil
 	else
 		return nil, output
@@ -177,7 +177,7 @@ local fuse_dir = function()
 	local mountdir = getmountdir()
 	local ok, err = fs.create("dir_all", Url(mountdir))
 	if not ok then
-		error("Cannot create mount point %s, error: %s", mountdir, err)
+		Log.error("Cannot create mount point %s, error: %s", mountdir, err)
 		return
 	end
 	return mountdir
@@ -361,9 +361,9 @@ local function mount_fuse(opts)
 		end
 		if retries == 0 then
 			-- First time ask for password dialog shown up
-			info(FUSE_ARCHIVE_MOUNT_ERROR_MSG[fuse_mount_res_code], max_retry - retries)
+			Log.info(FUSE_ARCHIVE_MOUNT_ERROR_MSG[fuse_mount_res_code], max_retry - retries)
 		else
-			error(FUSE_ARCHIVE_MOUNT_ERROR_MSG[fuse_mount_res_code], max_retry - retries)
+			Log.error(FUSE_ARCHIVE_MOUNT_ERROR_MSG[fuse_mount_res_code], max_retry - retries)
 		end
 		local cancelled, pw = show_ask_pw_dialog()
 		if not cancelled then
@@ -389,7 +389,7 @@ local function mount_fuse(opts)
 					return false
 				end
 			end
-			error(FUSE_ARCHIVE_MOUNT_ERROR_MSG[fuse_mount_res_code], table.unpack(payload_error_notify))
+			Log.error(FUSE_ARCHIVE_MOUNT_ERROR_MSG[fuse_mount_res_code], table.unpack(payload_error_notify))
 		end
 		return false
 	end
