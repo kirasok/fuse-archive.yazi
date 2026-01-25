@@ -84,11 +84,17 @@ local function path_remove_trailing_slash(path)
 	return (path:gsub("/$", ""))
 end
 
+local function getmountdir()
+  local username = os.getenv("USER") or ""
+  local mount_root_dir = get_state("global", "mount_root_dir")
+  local mountdir = string.format("/yazi.%s/fuse-archive", username)
+  return mount_root_dir .. mountdir
+end
+
 local is_mount_point = ya.sync(function(state)
 	local dir = cx.active.current.cwd.name
 	local cwd = tostring(cx.active.current.cwd)
-	local mount_root_dir = get_state("global", "mount_root_dir")
-	local match_pattern = "^" .. is_literal_string(mount_root_dir .. "/yazi/fuse-archive") .. "/[^/]+%.tmp%.[^/]+$"
+	local match_pattern = "^" .. is_literal_string(getmountdir()) .. "/[^/]+%.tmp%.[^/]+$"
 
 	for archive, _ in pairs(state) do
 		if archive == dir and string.match(cwd, match_pattern) then
@@ -166,14 +172,13 @@ end
 ---Get the fuse mount point
 ---@return string|nil
 local fuse_dir = function()
-	local mount_root_dir = get_state("global", "mount_root_dir")
-	local fuse_mount_point = mount_root_dir .. "/yazi/fuse-archive"
-	local _, _, exit_code = os.execute("mkdir -p " .. ya.quote(fuse_mount_point))
+  local mountdir = getmountdir()
+	local _, _, exit_code = os.execute("mkdir -p " .. ya.quote(mountdir))
 	if exit_code ~= 0 then
-		error("Cannot create mount point %s", fuse_mount_point)
+		error("Cannot create mount point %s", mountdir)
 		return
 	end
-	return fuse_mount_point
+	return mountdir
 end
 
 local function split_by_space_or_comma(input)
@@ -272,8 +277,7 @@ local function show_ask_pw_dialog()
 end
 
 local redirect_mounted_tab_to_home = ya.sync(function(state, _)
-	local mount_root_dir = get_state("global", "mount_root_dir")
-	local match_pattern = "^" .. is_literal_string(mount_root_dir .. "/yazi/fuse-archive") .. "/[^/]+%.tmp%.[^/]+$"
+	local match_pattern = "^" .. is_literal_string(getmountdir()) .. "/[^/]+%.tmp%.[^/]+$"
 	local HOME = os.getenv("HOME")
 
 	for _, tab in ipairs(cx.tabs) do
