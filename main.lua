@@ -4,6 +4,7 @@ local Log = {}
 function Log.error(s, ...)
 	ya.notify({ title = "fuse-archive", content = string.format(s, ...), timeout = 3, level = "error" })
 end
+
 function Log.info(s, ...)
 	ya.notify({ title = "fuse-archive", content = string.format(s, ...), timeout = 3, level = "info" })
 end
@@ -67,25 +68,22 @@ local get_state = ya.sync(function(state, archive, key)
 	end
 end)
 
+--- Escapes special characters of Lua Pattern
+---@param str string
+---@return string
 local function is_literal_string(str)
 	return str and str:gsub("([%^%$%(%)%%%.%[%]%*%+%-%?])", "%%%1")
 end
 
-local function path_quote(path)
-	if not path or path == "" then
-		return path
-	end
-	local result = "'" .. string.gsub(tostring(path), "'", "'\\''") .. "'"
-	return result
-end
-
+--- Removes trailing slash from path string
+---@param path string
+---@return string
 local function path_remove_trailing_slash(path)
-	if path == "/" then
-		return path
-	end
-	return (path:gsub("/$", ""))
+	return (path:gsub("^(.+)/$", "%1"))
 end
 
+--- Returns mount directory
+---@return string
 local function getmountdir()
 	local username = os.getenv("USER") or ""
 	local mount_root_dir = get_state("global", "mount_root_dir")
@@ -93,6 +91,7 @@ local function getmountdir()
 	return mount_root_dir .. mountdir
 end
 
+---@type fun(): boolean
 local is_mount_point = ya.sync(function(state)
 	local dir = cx.active.current.cwd.name
 	local cwd = tostring(cx.active.current.cwd)
@@ -106,25 +105,30 @@ local is_mount_point = ya.sync(function(state)
 	return false
 end)
 
----@return Url|nil, boolean|nil
+---@type fun(): Url|nil, boolean|nil
 local current_file = ya.sync(function()
 	local h = cx.active.current.hovered
 	if not h then
 		return
 	end
+	---@diagnostic disable-next-line: redundant-return-value
 	return h.url, h.cha.is_dir
 end)
 
+---@type fun(): Url
 local current_dir = ya.sync(function()
 	return cx.active.current.cwd
 end)
 
+---@type fun(): string?
 local current_dir_name = ya.sync(function()
 	return cx.active.current.cwd.name
 end)
 
-local enter = function(hovered_url, is_dir)
-	if hovered_url and is_dir then
+--- Smart enter implementation
+---@param is_dir boolean
+local function enter(is_dir)
+	if is_dir then
 		ya.emit("enter", {})
 	else
 		if get_state("global", "smart_enter") then
@@ -138,11 +142,11 @@ end
 ---run any command
 ---@param cmd string
 ---@param args string[]
----@param _stdin? STD_STREAM|nil
+---@param _stdin integer?
 ---@return integer|nil, Output|nil
 local function run_command(cmd, args, _stdin)
 	local cwd = current_dir()
-	cwd = tostring(cwd.scheme and cwd.scheme.is_virtual and Url(cwd.scheme.cache .. tostring(cwd.path)).parent or cwd)
+	local cwd = tostring(cwd.scheme and cwd.scheme.is_virtual and Url(cwd.scheme.cache .. tostring(cwd)).parent or cwd)
 
 	local stdin = _stdin or Command.PIPED
 	local child, cmd_err =
@@ -150,20 +154,23 @@ local function run_command(cmd, args, _stdin)
 
 	if not child then
 		Log.error("Failed to start `%s` failed with error: %s", cmd, cmd_err)
-		return cmd_err, nil
+		return cmd_err and cmd_err.code, nil
 	end
 
 	local output, out_err = child:wait_with_output()
 	if not output then
 		Log.error("Cannot read `%s` output, error: %s", cmd, out_err)
-		return out_err, nil
+		return out_err and out_err.code, nil
 	else
 		return nil, output
 	end
 end
 
-local is_mounted = function(dir_path)
-	local cmd_err_code, res = run_command("mountpoint", { "-q ", path_quote(dir_path) })
+--- Check if path is mounted
+---@param path string
+---@return boolean ok
+local function is_mounted(path)
+	local cmd_err_code, res = run_command("mountpoint", { "-q ", ya.quote(path) })
 	if cmd_err_code or res == nil or res.status.code ~= 0 then
 		-- case error, or mountpoint command not found
 		return false
@@ -183,6 +190,8 @@ local fuse_dir = function()
 	return mountdir
 end
 
+---@param input string
+---@return string[]
 local function split_by_space_or_comma(input)
 	local result = {}
 	for word in string.gmatch(input, "[^%s,]+") do
@@ -238,7 +247,6 @@ local function add_to_set(set, t2)
 	return set
 end
 
----
 ---@param tmp_file_name string tmp file name
 ---@return Url|nil
 local function get_mount_url(tmp_file_name)
@@ -278,6 +286,7 @@ local function show_ask_pw_dialog()
 	return cancelled, passphrase
 end
 
+---@type fun()
 local redirect_mounted_tab_to_home = ya.sync(function(state, _)
 	local match_pattern = "^" .. is_literal_string(getmountdir()) .. "/[^/]+%.tmp%.[^/]+$"
 	local HOME = os.getenv("HOME")
@@ -313,7 +322,7 @@ local function mount_fuse(opts)
 	local ignore_global_error_notify = false
 	local payload_error_notify = {}
 
-	if is_mounted(opts.fuse_mount_point) then
+	if is_mounted(tostring(opts.fuse_mount_point)) then
 		return true
 	end
 
@@ -496,14 +505,17 @@ local function setup(_, opts)
 	-- trigger unmount on quit
 	ps.sub("key-quit", function(args)
 		unmount_on_quit()
+		---@diagnostic disable-next-line: redundant-return-value
 		return args
 	end)
 	ps.sub("emit-quit", function(args)
 		unmount_on_quit()
+		---@diagnostic disable-next-line: redundant-return-value
 		return args
 	end)
 	ps.sub("emit-ind-quit", function(args)
 		unmount_on_quit()
+		---@diagnostic disable-next-line: redundant-return-value
 		return args
 	end)
 end
@@ -523,7 +535,7 @@ return {
 			end
 			local VALID_EXTENSIONS = get_state("global", "valid_extensions")
 			if is_dir or is_dir == nil or (is_dir == false and not VALID_EXTENSIONS[hovered_url.ext]) then
-				enter(hovered_url, is_dir)
+				enter(is_dir or false)
 				return
 			end
 			local is_virtual = hovered_url.scheme and hovered_url.scheme.is_virtual
