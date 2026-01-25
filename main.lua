@@ -337,10 +337,19 @@ local function mount_fuse(opts)
 	end
 	local res, _ = Command("fuse-archive")
 			:arg(args)
-			-- :stdin(passpharase_stdin)
+			:stdin(Command.PIPED)
 			:stderr(Command.PIPED)
 			:stdout(Command.PIPED)
-			:output()
+			:spawn()
+	if res then
+		if passphrase then
+			res:write_all(passphrase)
+			---@diagnostic disable-next-line: undefined-field
+			res:flush() -- https://github.com/sxyazi/yazi/blob/face6aed40b37f86be4320bab934b2dcf98277fe/yazi-plugin/src/process/child.rs#L146
+		end
+		---@diagnostic disable-next-line: cast-local-type
+		res, _ = res:wait_with_output()
+	end
 
 	local fuse_mount_res_code, fuse_mount_res_msg
 
