@@ -151,7 +151,7 @@ The plugin supports the following options, which can be assigned during setup:
 3. (optional) `extra_extensions`: A list of extensions to add to the supported mount list.
    This is useful if you want to mount an archive format that I may have missed or unawared it is supported by fuse-archive.
 
-4. (optional) `mount_options`: String of mount options to be used when mounting the archive, separated by comma or space.
+4. (optional) `mount_options`: List of mount options to be used when mounting the archive, separated by comma or space.
    List of options: `fuse-archive -h`
 
 5. (optional) `mount_root_dir`: Full path of the directory where you want to mount the archive. Default is `/tmp`.
@@ -161,7 +161,7 @@ require("fuse-archive"):setup({
   smart_enter = true,
   excluded_extensions = { "deb", "apk", "rpm" },
   extra_extensions = { "xyz" },
-  mount_options = "nocache,nosymlinks",
+  mount_options = { "nocache", "nosymlinks" },
   mount_root_dir = os.getenv("HOME") .. "/abc_folder",
 })
 ```
