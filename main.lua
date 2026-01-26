@@ -140,8 +140,8 @@ end)
 local State = {}
 
 --- Set/get mount_root_dir
----@param value Url?
----@return Url
+---@param value string?
+---@return string
 function State.mount_root_dir(value)
 	if value then
 		set_state("global", "mount_root_dir", value)
@@ -167,16 +167,6 @@ function State.valid_extensions(value)
 		set_state("global", "valid_extensions", value)
 	end
 	return get_state("global", "valid_extensions")
-end
-
---- Set/get fuse_dir
----@param value Url?
----@return Url
-function State.fuse_dir(value)
-	if value then
-		set_state("global", "fuse_dir", value)
-	end
-	return get_state("global", "fuse_dir")
 end
 
 --- Get/set mount_options
@@ -216,19 +206,11 @@ local function path_remove_trailing_slash(path)
 	return (path:gsub("^(.+)/$", "%1"))
 end
 
---- Returns mount directory
----@return string
-local function getmountdir()
-	local mount_root_dir = State.mount_root_dir()
-	local mountdir = string.format("/yazi.%i/fuse-archive", ya.uid())
-	return mount_root_dir .. mountdir
-end
-
 ---@type fun(): boolean
 local is_mount_point = ya.sync(function(state)
 	local dir = cx.active.current.cwd.name
 	local cwd = tostring(cx.active.current.cwd)
-	local match_pattern = "^" .. is_literal_string(getmountdir()) .. "/[^/]+%.tmp%.[^/]+$"
+	local match_pattern = "^" .. is_literal_string(State.mount_root_dir()) .. "/[^/]+%.tmp%.[^/]+$"
 
 	for archive, _ in pairs(state) do
 		if archive == dir and string.match(cwd, match_pattern) then
@@ -311,18 +293,6 @@ local function is_mounted(path)
 	return res and res.status.success
 end
 
----Get the fuse mount point
----@return Url|nil
-local function fuse_dir()
-	local mountdir = Url(getmountdir())
-	local ok, err = fs.create("dir_all", mountdir)
-	if not ok then
-		Log.error("Cannot create mount point %s, error: %s", mountdir, err)
-		return
-	end
-	return mountdir
-end
-
 ---@param input string
 ---@return string[]
 local function split_by_space_or_comma(input)
@@ -336,8 +306,7 @@ end
 ---@param tmp_file_name string tmp file name
 ---@return Url|nil
 local function get_mount_url(tmp_file_name)
-	local fuse_mount_point = State.fuse_dir()
-	return fuse_mount_point:join(tmp_file_name)
+	return Url(State.mount_root_dir()):join(tmp_file_name)
 end
 
 ---Show password input dialog
@@ -355,7 +324,7 @@ end
 
 ---@type fun()
 local redirect_mounted_tab_to_home = ya.sync(function(state, _)
-	local match_pattern = "^" .. is_literal_string(getmountdir()) .. "/[^/]+%.tmp%.[^/]+$"
+	local match_pattern = "^" .. is_literal_string(State.mount_root_dir()) .. "/[^/]+%.tmp%.[^/]+$"
 
 	for _, tab in ipairs(cx.tabs) do
 		local dir = tab.current.cwd.name
@@ -516,16 +485,18 @@ end
 local function setup(_, opts)
 	opts = opts or {}
 	State.mount_root_dir(
-		Url(opts.mount_root_dir
+		tostring(Url(opts.mount_root_dir
 			and type(opts.mount_root_dir) == "string"
 			and path_remove_trailing_slash(opts.mount_root_dir)
-			or "/tmp")
+			or "/tmp"):join(string.format("yazi.%i/fuse-archive", ya.uid())))
 	)
-	local fuse = fuse_dir()
-	if not fuse then
+
+	local ok, err = fs.create("dir_all", Url(State.mount_root_dir()))
+	if not ok then
+		Log.error("Cannot create mount point %s, error: %s", State.mount_root_dir(), err)
 		return
 	end
-	State.fuse_dir(fuse)
+
 	State.smart_enter(opts.smart_enter or false)
 	local mount_options = {}
 	if opts and opts.mount_options then
