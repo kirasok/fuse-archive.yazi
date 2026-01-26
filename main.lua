@@ -63,6 +63,21 @@ function Set:__shl(other)
 	return combined
 end
 
+---@return any[]
+function Set:__call()
+	local values = {}
+	for k, v in pairs(self) do
+		if v then
+			table.insert(values, k)
+		end
+	end
+	return values
+end
+
+function Set:__len()
+	return #self()
+end
+
 ---@enum FUSE_ARCHIVE_RETURN_CODE
 local FUSE_ARCHIVE_RETURN_CODE = {
 	SUCCESS = 0,                           -- Success.
@@ -254,23 +269,6 @@ local function split_by_space_or_comma(input)
 	return result
 end
 
---- return a string array with unique value
----@param tbl string[]
----@return string[] table with only unique strings
-local function tbl_unique_strings(tbl)
-	local unique_table = {}
-	local seen = {}
-
-	for _, str in ipairs(tbl) do
-		if not seen[str] then
-			seen[str] = true
-			table.insert(unique_table, str)
-		end
-	end
-
-	return unique_table
-end
-
 ---@param tmp_file_name string tmp file name
 ---@return Url|nil
 local function get_mount_url(tmp_file_name)
@@ -340,7 +338,7 @@ local function mount_fuse(opts)
 	}
 	if opts.mount_options and #opts.mount_options > 0 then
 		table.insert(args, 1,
-			" -o " .. tbl_unique_strings(opts.mount_options)
+			" -o " .. Set.from_table(opts.mount_options)()
 		)
 	end
 	local res, _ = Command("fuse-archive")
