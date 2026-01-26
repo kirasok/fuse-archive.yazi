@@ -457,49 +457,12 @@ end
 
 local function unmount_on_quit()
 	redirect_mounted_tab_to_cwd()
-	local mount_root_dir = State.mount_root_dir
-	local unmount_script = os.getenv("HOME") .. "/.config/yazi/plugins/fuse-archive.yazi/assets/unmount_on_quit.sh"
-	-- FIX: doesn't unmount archive if CWD is inside it's mount point
-	Command(ya.quote(unmount_script)):arg(ya.quote(mount_root_dir)):spawn()
-end
-
----@param opts fuse-archive.Opts
-local function setup(_, opts)
-	opts = opts or {}
-	local ok, err = Opts.validate(opts)
-	if not ok then
-		Log.error("%s", table.concat(err, "\n"))
-		return -- Invalid opts, return
+	local home = os.getenv("HOME")
+	if not home then
+		return
 	end
-
-	State.mount_root_dir = tostring(Url(opts.mount_root_dir or "/tmp"):join(string.format("yazi.%i/fuse-archive", ya.uid())))
-	local ok, err = fs.create("dir_all", Url(State.mount_root_dir))
-	if not ok then
-		Log.error("Cannot create mount point %s, error: %s", State.mount_root_dir, err)
-		return -- not possible to run this plugin if there is no mount point root
-	end
-
-	State.smart_enter = opts.smart_enter or false
-	State.mount_options = opts.mount_options
-	State.valid_extensions = Set.from_table(ORIGINAL_SUPPORTED_EXTENSIONS) |
-			Set.from_table(opts.extra_extensions or {}) << Set.from_table(opts.excluded_extensions or {})
-
-	-- trigger unmount on quit
-	ps.sub("key-quit", function(args)
-		unmount_on_quit()
-		---@diagnostic disable-next-line: redundant-return-value
-		return args
-	end)
-	ps.sub("emit-quit", function(args)
-		unmount_on_quit()
-		---@diagnostic disable-next-line: redundant-return-value
-		return args
-	end)
-	ps.sub("emit-ind-quit", function(args)
-		unmount_on_quit()
-		---@diagnostic disable-next-line: redundant-return-value
-		return args
-	end)
+	local unmount_script = home .. "/.config/yazi/plugins/fuse-archive.yazi/assets/unmount_on_quit.sh"
+	Command(ya.quote(unmount_script)):cwd(home):arg(ya.quote(State.mount_root_dir)):spawn()
 end
 
 return {
