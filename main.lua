@@ -477,9 +477,9 @@ end
 local function unmount_on_quit()
 	redirect_mounted_tab_to_home()
 	local mount_root_dir = State.mount_root_dir()
-	local unmount_script = "~/.config/yazi/plugins/fuse-archive.yazi/assets/unmount_on_quit.sh"
+	local unmount_script = os.getenv("HOME") .. "/.config/yazi/plugins/fuse-archive.yazi/assets/unmount_on_quit.sh"
 	-- FIX: doesn't unmount archive if CWD is inside it's mount point
-	Command(ya.quote(unmount_script)):arg(tostring(mount_root_dir)):spawn()
+	Command(ya.quote(unmount_script)):arg(ya.quote(mount_root_dir)):spawn()
 end
 
 local function setup(_, opts)
