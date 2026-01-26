@@ -198,11 +198,10 @@ local State = setmetatable(
 ---@field mount_options string[]? nil
 ---@field mount_root_dir string? /tmp
 
-local Opts = {}
 --- Validate setup options
 ---@param opts fuse-archive.Opts
 ---@return boolean ok, string[]
-function Opts.validate(opts)
+local function validate_opts(opts)
 	--- @type string[]
 	local errors = {}
 
@@ -244,15 +243,16 @@ end
 --- Escapes special characters of Lua Pattern
 ---@param str string
 ---@return string
-local function is_literal_string(str)
+local function escape_lua_patterns(str)
 	return str and str:gsub("([%^%$%(%)%%%.%[%]%*%+%-%?])", "%%%1")
 end
 
+--- Check if CWD is archive mount point
 ---@type fun(): boolean
-local is_mount_point = ya.sync(function(state)
+local cwd_is_mount_point = ya.sync(function(state)
 	local dir = cx.active.current.cwd.name
 	local cwd = tostring(cx.active.current.cwd)
-	local match_pattern = "^" .. is_literal_string(State.mount_root_dir) .. "/[^/]+%.tmp%.[^/]+$"
+	local match_pattern = "^" .. escape_lua_patterns(State.mount_root_dir) .. "/[^/]+%.tmp%.[^/]+$"
 
 	for archive, _ in pairs(state) do
 		if archive == dir and string.match(cwd, match_pattern) then
@@ -263,7 +263,7 @@ local is_mount_point = ya.sync(function(state)
 end)
 
 ---@type fun(): Url|nil, boolean|nil
-local current_file = ya.sync(function()
+local hovered_file = ya.sync(function()
 	local h = cx.active.current.hovered
 	if not h then
 		return
@@ -273,13 +273,8 @@ local current_file = ya.sync(function()
 end)
 
 ---@type fun(): Url
-local current_dir = ya.sync(function()
+local getcwd = ya.sync(function()
 	return cx.active.current.cwd
-end)
-
----@type fun(): string?
-local current_dir_name = ya.sync(function()
-	return cx.active.current.cwd.name
 end)
 
 --- Smart enter implementation
@@ -315,7 +310,7 @@ end
 
 ---@type fun()
 local redirect_mounted_tab_to_cwd = ya.sync(function(state, _)
-	local match_pattern = "^" .. is_literal_string(State.mount_root_dir) .. "/[^/]+%.tmp%.[^/]+$"
+	local match_pattern = "^" .. escape_lua_patterns(State.mount_root_dir) .. "/[^/]+%.tmp%.[^/]+$"
 
 	for _, tab in ipairs(cx.tabs) do
 		local dir = tab.current.cwd.name
@@ -472,51 +467,89 @@ return {
 			return
 		end
 
-		if action == "mount" then
-			local hovered_url, is_dir = current_file()
-			local hovered_url_raw = tostring(hovered_url)
-			if hovered_url == nil then
-				return
-			end
-			if is_dir or is_dir == nil or (is_dir == false and not State.valid_extensions[hovered_url.ext]) then
-				enter(is_dir or false)
-				return
-			end
-			local is_virtual = hovered_url.scheme and hovered_url.scheme.is_virtual
-			hovered_url = is_virtual and Url(hovered_url.scheme.cache .. tostring(hovered_url.path)) or hovered_url
-			if is_virtual and not fs.cha(hovered_url) then
-				ya.emit("download", { hovered_url_raw })
-				return
-			end
+		---@enum fuse-archive.Actions
+		local Actions = {
+			mount = function()
+				local hovered_url, is_dir = hovered_file()
+				local hovered_url_raw = tostring(hovered_url)
+				if hovered_url == nil then
+					return
+				end
+				if is_dir or not State.valid_extensions[hovered_url.ext] then
+					enter(is_dir or true)
+					return
+				end
 
-			local tmp_fname = hovered_url.name .. ".tmp." .. ya.hash(hovered_url_raw)
-			local tmp_file_url = Url(State.mount_root_dir):join(tmp_fname)
+				local is_virtual = hovered_url.scheme.is_virtual
+				hovered_url = is_virtual and Url(hovered_url.scheme.cache .. tostring(hovered_url.path)) or hovered_url
+				if is_virtual and not fs.cha(hovered_url) then
+					ya.emit("download", { hovered_url_raw })
+					return
+				end
 
-			if tmp_file_url then
+				local tmp_fname = hovered_url.name .. ".tmp." .. ya.hash(hovered_url_raw)
+				local tmp_file_url = Url(State.mount_root_dir):join(tmp_fname)
 				local success = mount_fuse({
 					archive_path = hovered_url,
 					fuse_mount_point = tmp_file_url,
 					mount_options = State.mount_options,
 				})
+
 				if success then
-					---@type fuse-archive.OpenedFile
-					local value = { cwd = tostring(current_dir()), tmp = tostring(tmp_file_url) }
-					State[tmp_fname] = value
+					State[tmp_fname] = { cwd = tostring(getcwd()), tmp = tostring(tmp_file_url) }
 					ya.emit("cd", { tostring(tmp_file_url), raw = true })
 				end
-			end
-			-- leave without unmount
-		elseif action == "leave" then
-			if not is_mount_point() then
-				ya.emit("leave", {})
-				return
-			end
-			local file = current_dir_name()
-			ya.emit("cd", { State[file].cwd, raw = true })
-			return
-		elseif action == "unmount" then
-			unmount_on_quit()
-		end
+			end,
+			leave = function()
+				if not cwd_is_mount_point() then
+					ya.emit("leave", {})
+					return
+				end
+				ya.emit("cd", { State[getcwd().name].cwd, raw = true })
+			end,
+			unmount = unmount_on_quit
+		}
+		Actions[action]()
 	end,
-	setup = setup,
+
+	setup = ---@param opts fuse-archive.Opts
+			function(_, opts)
+				opts = opts or {}
+				local ok, err = validate_opts(opts)
+				if not ok then
+					Log.error("%s", table.concat(err, "\n"))
+					return -- Invalid opts, return
+				end
+
+				State.mount_root_dir = tostring(Url(opts.mount_root_dir or "/tmp"):join(string.format("yazi.%i/fuse-archive",
+					ya.uid())))
+				local ok, err = fs.create("dir_all", Url(State.mount_root_dir))
+				if not ok then
+					Log.error("Cannot create mount point %s, error: %s", State.mount_root_dir, err)
+					return -- not possible to run this plugin if there is no mount point root
+				end
+
+				State.smart_enter = opts.smart_enter or false
+				State.mount_options = opts.mount_options
+				State.valid_extensions = Set.from_table(ORIGINAL_SUPPORTED_EXTENSIONS) |
+						Set.from_table(opts.extra_extensions or {}) << Set.from_table(opts.excluded_extensions or {})
+
+				-- trigger unmount on quit
+				ps.sub("key-quit", function(args)
+					unmount_on_quit()
+					---@diagnostic disable-next-line: redundant-return-value
+					return args
+				end)
+				ps.sub("emit-quit", function(args)
+					unmount_on_quit()
+					---@diagnostic disable-next-line: redundant-return-value
+					return args
+				end)
+				ps.sub("emit-ind-quit", function(args)
+					unmount_on_quit()
+					---@diagnostic disable-next-line: redundant-return-value
+					return args
+				end)
+			end
+	,
 }
