@@ -119,6 +119,28 @@ local YA_INPUT_EVENT = {
 	CANCELLED = 2,
 	VALUE_CHANGED = 3,
 }
+-- stylua: ignore
+local ORIGINAL_SUPPORTED_EXTENSIONS = {
+	"7z", "7zip", "a", "aia", "apk",
+	"ar", "b64", "base64", "br", "brotli",
+	"bz2", "bzip2", "cab", "cpio", "crx",
+	"deb", "docx", "grz", "grzip", "gz",
+	"gzip", "iso", "iso9660", "jar", "lha",
+	"lrz", "lrzip", "lz", "lz4", "lzip",
+	"lzma", "lzo", "lzop", "mtree", "odf",
+	"odg", "odp", "ods", "odt", "ppsx",
+	"pptx", "rar", "rpm", "tar", "tar.br",
+	"tar.brotli", "tar.bz2", "tar.bzip2", "tar.grz", "tar.grzip",
+	"tar.gz", "tar.gzip", "tar.lha", "tar.lrz", "tar.lrzip",
+	"tar.lz", "tar.lz4", "tar.lzip", "tar.lzma", "tar.lzo",
+	"tar.lzop", "tar.xz", "tar.z", "tar.zst", "tar.zstd",
+	"taz", "tb2", "tbr", "tbz", "tbz2",
+	"tgz", "tlz", "tlz4", "tlzip", "tlzma",
+	"txz", "tz", "tz2", "tzs", "tzst",
+	"tzstd", "uu", "warc", "xar", "xlsx",
+	"xz", "z", "zip", "zipx", "zst",
+	"zstd",
+}
 
 local set_state = ya.sync(function(state, archive, key, value)
 	if not state[archive] then
@@ -169,18 +191,61 @@ local State = setmetatable(
 		end
 	})
 
+---@class fuse-archive.Opts
+---@field smart_enter boolean? false
+---@field excluded_extensions string[]? nil
+---@field extra_extensions string[]? nil
+---@field mount_options string[]? nil
+---@field mount_root_dir string? /tmp
+
+local Opts = {}
+--- Validate setup options
+---@param opts fuse-archive.Opts
+---@return boolean ok, string[]
+function Opts.validate(opts)
+	--- @type string[]
+	local errors = {}
+
+	if opts.smart_enter and type(opts.smart_enter) ~= "boolean" then
+		table.insert(errors, "Type of smart_enter is not boolean")
+	end
+
+	if opts.mount_root_dir then
+		if type(opts.mount_root_dir) ~= "string" then
+			table.insert(errors, "Type of mount_root_dir is not string")
+		elseif opts.mount_root_dir:sub(1, 1) ~= "/" then
+			table.insert(errors, "mount_root_dir must be absolute path")
+		end
+	end
+
+	---@param name string
+	local function validate_list(name, list)
+		---@return boolean if all elements are strings
+		local function all_are_strings(list)
+			for _, v in pairs(list) do
+				if type(v) ~= "string" then
+					return false
+				end
+			end
+			return true
+		end
+		if list ~= nil and (type(list) ~= "table" or not all_are_strings(list)) then
+			table.insert(errors, name .. " must be a list of strings")
+		end
+	end
+
+	validate_list("excluded_extensions", opts.excluded_extensions)
+	validate_list("extra_extensions", opts.extra_extensions)
+	validate_list("mount_options", opts.mount_options)
+
+	return #errors == 0, errors
+end
+
 --- Escapes special characters of Lua Pattern
 ---@param str string
 ---@return string
 local function is_literal_string(str)
 	return str and str:gsub("([%^%$%(%)%%%.%[%]%*%+%-%?])", "%%%1")
-end
-
---- Removes trailing slash from path string
----@param path string
----@return string
-local function path_remove_trailing_slash(path)
-	return (path:gsub("^(.+)/$", "%1"))
 end
 
 ---@type fun(): boolean
@@ -235,16 +300,6 @@ local function is_mounted(path)
 	return res and res.status.success or false
 end
 
----@param input string
----@return string[]
-local function split_by_space_or_comma(input)
-	local result = {}
-	for word in string.gmatch(input, "[^%s,]+") do
-		table.insert(result, word)
-	end
-	return result
-end
-
 ---Show password input dialog
 ---@return boolean ok, string password
 local function show_ask_pw_dialog()
@@ -286,7 +341,6 @@ end)
 local function mount_fuse(opts)
 	local archive_path = opts.archive_path
 	local fuse_mount_point = opts.fuse_mount_point
-	local mount_options = opts.mount_options or {}
 	local passphrase = opts.passphrase
 	local max_retry = opts.max_retry or 3
 	local retries = opts.retries or 0
@@ -345,7 +399,7 @@ local function mount_fuse(opts)
 			or fuse_mount_res_code == FUSE_ARCHIVE_RETURN_CODE.CREATE_CACHE_FILE_FAILED
 	then
 		-- disable cache
-		table.insert(mount_options, "nocache")
+		table.insert(opts.mount_options, "nocache")
 	elseif
 			fuse_mount_res_code == FUSE_ARCHIVE_RETURN_CODE.ENCRYPTED_FILE_BUT_NOT_PASSWORD
 			or fuse_mount_res_code == FUSE_ARCHIVE_RETURN_CODE.ENCRYPTED_FILE_BUT_WRONG_PASSWORD
@@ -394,7 +448,7 @@ local function mount_fuse(opts)
 	return mount_fuse({
 		archive_path = archive_path,
 		fuse_mount_point = fuse_mount_point,
-		mount_options = mount_options,
+		mount_options = opts.mount_options,
 		passphrase = passphrase,
 		retries = retries,
 		max_retry = max_retry,
@@ -409,72 +463,26 @@ local function unmount_on_quit()
 	Command(ya.quote(unmount_script)):arg(ya.quote(mount_root_dir)):spawn()
 end
 
+---@param opts fuse-archive.Opts
 local function setup(_, opts)
 	opts = opts or {}
-	State.mount_root_dir =
-			tostring(Url(opts.mount_root_dir
-				and type(opts.mount_root_dir) == "string"
-				and path_remove_trailing_slash(opts.mount_root_dir)
-				or "/tmp"):join(string.format("yazi.%i/fuse-archive", ya.uid())))
+	local ok, err = Opts.validate(opts)
+	if not ok then
+		Log.error("%s", table.concat(err, "\n"))
+		return -- Invalid opts, return
+	end
 
+	State.mount_root_dir = tostring(Url(opts.mount_root_dir or "/tmp"):join(string.format("yazi.%i/fuse-archive", ya.uid())))
 	local ok, err = fs.create("dir_all", Url(State.mount_root_dir))
 	if not ok then
 		Log.error("Cannot create mount point %s, error: %s", State.mount_root_dir, err)
-		return
+		return -- not possible to run this plugin if there is no mount point root
 	end
 
 	State.smart_enter = opts.smart_enter or false
-	local mount_options = {}
-	if opts and opts.mount_options then
-		if type(opts.mount_options) == "string" then
-			mount_options = split_by_space_or_comma(opts.mount_options)
-		else
-			error("mount_options option in setup() must be a string separated by space or comma")
-		end
-	end
-	State.mount_options = mount_options
-
-	-- stylua: ignore
-	local ORIGINAL_SUPPORTED_EXTENSIONS = {
-		"7z", "7zip", "a", "aia", "apk",
-		"ar", "b64", "base64", "br", "brotli",
-		"bz2", "bzip2", "cab", "cpio", "crx",
-		"deb", "docx", "grz", "grzip", "gz",
-		"gzip", "iso", "iso9660", "jar", "lha",
-		"lrz", "lrzip", "lz", "lz4", "lzip",
-		"lzma", "lzo", "lzop", "mtree", "odf",
-		"odg", "odp", "ods", "odt", "ppsx",
-		"pptx", "rar", "rpm", "tar", "tar.br",
-		"tar.brotli", "tar.bz2", "tar.bzip2", "tar.grz", "tar.grzip",
-		"tar.gz", "tar.gzip", "tar.lha", "tar.lrz", "tar.lrzip",
-		"tar.lz", "tar.lz4", "tar.lzip", "tar.lzma", "tar.lzo",
-		"tar.lzop", "tar.xz", "tar.z", "tar.zst", "tar.zstd",
-		"taz", "tb2", "tbr", "tbz", "tbz2",
-		"tgz", "tlz", "tlz4", "tlzip", "tlzma",
-		"txz", "tz", "tz2", "tzs", "tzst",
-		"tzstd", "uu", "warc", "xar", "xlsx",
-		"xz", "z", "zip", "zipx", "zst",
-		"zstd",
-	}
-
-	local SET_ALLOWED_EXTENSIONS = Set.from_table(ORIGINAL_SUPPORTED_EXTENSIONS)
-
-	if opts and opts.extra_extensions then
-		if type(opts.extra_extensions) == "table" then
-			SET_ALLOWED_EXTENSIONS = SET_ALLOWED_EXTENSIONS | Set.from_table(opts.extra_extensions)
-		else
-			error("extra_extensions option in setup() must be a table of string")
-		end
-	end
-
-	if opts and opts.excluded_extensions then
-		if type(opts.excluded_extensions) == "table" then
-			SET_ALLOWED_EXTENSIONS = SET_ALLOWED_EXTENSIONS << Set.from_table(opts.excluded_extensions)
-		else
-			error("excluded_extensions option in setup() must be a table of string")
-		end
-	end
-	State.valid_extensions = SET_ALLOWED_EXTENSIONS
+	State.mount_options = opts.mount_options
+	State.valid_extensions = Set.from_table(ORIGINAL_SUPPORTED_EXTENSIONS) |
+			Set.from_table(opts.extra_extensions or {}) << Set.from_table(opts.excluded_extensions or {})
 
 	-- trigger unmount on quit
 	ps.sub("key-quit", function(args)
