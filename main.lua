@@ -219,9 +219,8 @@ end
 --- Returns mount directory
 ---@return string
 local function getmountdir()
-	local username = os.getenv("USER") or ""
 	local mount_root_dir = State.mount_root_dir()
-	local mountdir = string.format("/yazi.%s/fuse-archive", username)
+	local mountdir = string.format("/yazi.%i/fuse-archive", ya.uid())
 	return mount_root_dir .. mountdir
 end
 
@@ -357,7 +356,6 @@ end
 ---@type fun()
 local redirect_mounted_tab_to_home = ya.sync(function(state, _)
 	local match_pattern = "^" .. is_literal_string(getmountdir()) .. "/[^/]+%.tmp%.[^/]+$"
-	local HOME = os.getenv("HOME")
 
 	for _, tab in ipairs(cx.tabs) do
 		local dir = tab.current.cwd.name
@@ -366,7 +364,7 @@ local redirect_mounted_tab_to_home = ya.sync(function(state, _)
 		for archive, _ in pairs(state) do
 			if archive == dir and string.match(cwd, match_pattern) then
 				ya.emit("cd", {
-					HOME,
+					"~",
 					tab = (type(tab.id) == "number" or type(tab.id) == "string") and tab.id or tab.id.value,
 					raw = true,
 				})
@@ -510,7 +508,7 @@ end
 local function unmount_on_quit()
 	redirect_mounted_tab_to_home()
 	local mount_root_dir = State.mount_root_dir()
-	local unmount_script = os.getenv("HOME") .. "/.config/yazi/plugins/fuse-archive.yazi/assets/unmount_on_quit.sh"
+	local unmount_script = "~/.config/yazi/plugins/fuse-archive.yazi/assets/unmount_on_quit.sh"
 	-- FIX: doesn't unmount archive if CWD is inside it's mount point
 	Command(ya.quote(unmount_script)):arg(tostring(mount_root_dir)):spawn()
 end
