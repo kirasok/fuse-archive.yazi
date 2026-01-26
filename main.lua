@@ -470,7 +470,7 @@ end
 ---@return string
 local function tmp_file_name(file_url)
 	local fname = file_url.name
-	local hash = ya.hash(file_url.name)
+	local hash = ya.hash(tostring(file_url))
 	return fname .. ".tmp." .. hash
 end
 
