@@ -140,8 +140,8 @@ end)
 local State = {}
 
 --- Set/get mount_root_dir
----@param value string?
----@return string
+---@param value Url?
+---@return Url
 function State.mount_root_dir(value)
 	if value then
 		set_state("global", "mount_root_dir", value)
@@ -170,8 +170,8 @@ function State.valid_extensions(value)
 end
 
 --- Set/get fuse_dir
----@param value string?
----@return string
+---@param value Url?
+---@return Url
 function State.fuse_dir(value)
 	if value then
 		set_state("global", "fuse_dir", value)
@@ -313,10 +313,10 @@ local function is_mounted(path)
 end
 
 ---Get the fuse mount point
----@return string|nil
-local fuse_dir = function()
-	local mountdir = getmountdir()
-	local ok, err = fs.create("dir_all", Url(mountdir))
+---@return Url|nil
+local function fuse_dir()
+	local mountdir = Url(getmountdir())
+	local ok, err = fs.create("dir_all", mountdir)
 	if not ok then
 		Log.error("Cannot create mount point %s, error: %s", mountdir, err)
 		return
@@ -338,10 +338,7 @@ end
 ---@return Url|nil
 local function get_mount_url(tmp_file_name)
 	local fuse_mount_point = State.fuse_dir()
-	if not fuse_mount_point then
-		return
-	end
-	return Url(fuse_mount_point):join(tmp_file_name)
+	return fuse_mount_point:join(tmp_file_name)
 end
 
 ---Show password input dialog
@@ -515,18 +512,21 @@ local function unmount_on_quit()
 	local mount_root_dir = State.mount_root_dir()
 	local unmount_script = os.getenv("HOME") .. "/.config/yazi/plugins/fuse-archive.yazi/assets/unmount_on_quit.sh"
 	-- FIX: doesn't unmount archive if CWD is inside it's mount point
-	Command(ya.quote(unmount_script)):arg(ya.quote(mount_root_dir)):spawn()
+	Command(ya.quote(unmount_script)):arg(tostring(mount_root_dir)):spawn()
 end
 
 local function setup(_, opts)
 	opts = opts or {}
 	State.mount_root_dir(
-		opts.mount_root_dir
-		and type(opts.mount_root_dir) == "string"
-		and path_remove_trailing_slash(opts.mount_root_dir)
-		or "/tmp"
+		Url(opts.mount_root_dir
+			and type(opts.mount_root_dir) == "string"
+			and path_remove_trailing_slash(opts.mount_root_dir)
+			or "/tmp")
 	)
 	local fuse = fuse_dir()
+	if not fuse then
+		return
+	end
 	State.fuse_dir(fuse)
 	State.smart_enter(opts.smart_enter or false)
 	local mount_options = {}
