@@ -323,17 +323,17 @@ local function show_ask_pw_dialog()
 end
 
 ---@type fun()
-local redirect_mounted_tab_to_home = ya.sync(function(state, _)
+local redirect_mounted_tab_to_cwd = ya.sync(function(state, _)
 	local match_pattern = "^" .. is_literal_string(State.mount_root_dir()) .. "/[^/]+%.tmp%.[^/]+$"
 
 	for _, tab in ipairs(cx.tabs) do
 		local dir = tab.current.cwd.name
 		local cwd = tostring(tab.current.cwd)
 
-		for archive, _ in pairs(state) do
+		for archive, value in pairs(state) do
 			if archive == dir and string.match(cwd, match_pattern) then
 				ya.emit("cd", {
-					"~",
+					value.cwd,
 					tab = (type(tab.id) == "number" or type(tab.id) == "string") and tab.id or tab.id.value,
 					raw = true,
 				})
@@ -475,7 +475,7 @@ local function tmp_file_name(file_url)
 end
 
 local function unmount_on_quit()
-	redirect_mounted_tab_to_home()
+	redirect_mounted_tab_to_cwd()
 	local mount_root_dir = State.mount_root_dir()
 	local unmount_script = os.getenv("HOME") .. "/.config/yazi/plugins/fuse-archive.yazi/assets/unmount_on_quit.sh"
 	-- FIX: doesn't unmount archive if CWD is inside it's mount point
