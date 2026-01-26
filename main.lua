@@ -243,41 +243,10 @@ end)
 --- Smart enter implementation
 ---@param is_dir boolean
 local function enter(is_dir)
-	if is_dir then
+	if not State.smart_enter() or is_dir then
 		ya.emit("enter", {})
 	else
-		if State.smart_enter() then
-			ya.emit("open", { hovered = true })
-		else
-			ya.emit("enter", {})
-		end
-	end
-end
-
----run any command
----@param cmd string
----@param args string[]
----@param _stdin integer?
----@return integer|nil, Output|nil
-local function run_command(cmd, args, _stdin)
-	local cwd = current_dir()
-	local cwd = tostring(cwd.scheme and cwd.scheme.is_virtual and Url(cwd.scheme.cache .. tostring(cwd)).parent or cwd)
-
-	local stdin = _stdin or Command.PIPED
-	local child, cmd_err =
-			Command(cmd):arg(args):cwd(cwd):stdin(stdin):stdout(Command.PIPED):stderr(Command.PIPED):spawn()
-
-	if not child then
-		Log.error("Failed to start `%s` failed with error: %s", cmd, cmd_err)
-		return cmd_err and cmd_err.code, nil
-	end
-
-	local output, out_err = child:wait_with_output()
-	if not output then
-		Log.error("Cannot read `%s` output, error: %s", cmd, out_err)
-		return out_err and out_err.code, nil
-	else
-		return nil, output
+		ya.emit("open", { hovered = true })
 	end
 end
 
@@ -285,12 +254,8 @@ end
 ---@param path string
 ---@return boolean ok
 local function is_mounted(path)
-	local cmd_err_code, res = run_command("mountpoint", { "-q ", ya.quote(path) })
-	if cmd_err_code or res == nil or res.status.code ~= 0 then
-		-- case error, or mountpoint command not found
-		return false
-	end
-	return res and res.status.success
+	local res, _ = Command("mountpoint"):arg { "-q ", ya.quote(path) }:output()
+	return res and res.status.success or false
 end
 
 ---@param input string
@@ -303,14 +268,8 @@ local function split_by_space_or_comma(input)
 	return result
 end
 
----@param tmp_file_name string tmp file name
----@return Url|nil
-local function get_mount_url(tmp_file_name)
-	return Url(State.mount_root_dir()):join(tmp_file_name)
-end
-
 ---Show password input dialog
----@return boolean cancelled, string password
+---@return boolean ok, string password
 local function show_ask_pw_dialog()
 	-- Asking user to input the password
 	local input_pw, event = ya.input({
@@ -319,7 +278,7 @@ local function show_ask_pw_dialog()
 		pos = { "center", x = 0, y = 0, w = 50, h = 3 },
 		position = { "center", x = 0, y = 0, w = 50, h = 3 },
 	})
-	return event ~= YA_INPUT_EVENT.CONFIRMED, input_pw or ""
+	return event == YA_INPUT_EVENT.CONFIRMED, input_pw or ""
 end
 
 ---@type fun()
@@ -425,8 +384,8 @@ local function mount_fuse(opts)
 		else
 			Log.error(FUSE_ARCHIVE_MOUNT_ERROR_MSG[fuse_mount_res_code], max_retry - retries)
 		end
-		local cancelled, pw = show_ask_pw_dialog()
-		if not cancelled then
+		local ok, pw = show_ask_pw_dialog()
+		if ok then
 			passphrase = pw
 		else
 			return false
@@ -463,15 +422,6 @@ local function mount_fuse(opts)
 		retries = retries,
 		max_retry = max_retry,
 	})
-end
-
----Mount path using inode (unique for each files)
----@param file_url Url
----@return string
-local function tmp_file_name(file_url)
-	local fname = file_url.name
-	local hash = ya.hash(tostring(file_url))
-	return fname .. ".tmp." .. hash
 end
 
 local function unmount_on_quit()
@@ -591,8 +541,9 @@ return {
 				ya.emit("download", { hovered_url_raw })
 				return
 			end
-			local tmp_fname = tmp_file_name(hovered_url)
-			local tmp_file_url = get_mount_url(tmp_fname)
+
+			local tmp_fname = hovered_url.name .. ".tmp." .. ya.hash(hovered_url_raw)
+			local tmp_file_url = Url(State.mount_root_dir()):join(tmp_fname)
 
 			if tmp_file_url then
 				local success = mount_fuse({
