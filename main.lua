@@ -402,8 +402,9 @@ local function mount_fuse(opts)
 		tostring(fuse_mount_point),
 	}
 	if opts.mount_options and #opts.mount_options > 0 then
-		table.insert(args, 1,
-			" -o " .. Set.from_table(opts.mount_options)()
+		table.insert(args, 1, "-o")
+		table.insert(args, 2,
+			table.concat(opts.mount_options, ",")
 		)
 	end
 	local res, _ = Command("fuse-archive")
