@@ -121,12 +121,10 @@ local YA_INPUT_EVENT = {
 }
 
 local set_state = ya.sync(function(state, archive, key, value)
-	if state[archive] then
-		state[archive][key] = value
-	else
+	if not state[archive] then
 		state[archive] = {}
-		state[archive][key] = value
 	end
+	state[archive][key] = value
 end)
 
 local get_state = ya.sync(function(state, archive, key)
@@ -137,60 +135,39 @@ local get_state = ya.sync(function(state, archive, key)
 	end
 end)
 
-local State = {}
+---@class fuse-archive.OpenedFile
+---@field cwd string
+---@field tmp string
 
---- Set/get mount_root_dir
----@param value string?
----@return string
-function State.mount_root_dir(value)
-	if value then
-		set_state("global", "mount_root_dir", value)
-	end
-	return get_state("global", "mount_root_dir")
-end
-
---- Set/get smart_enter
----@param value boolean?
----@return boolean
-function State.smart_enter(value)
-	if value then
-		set_state("global", "smart_enter", value)
-	end
-	return get_state("global", "smart_enter")
-end
-
---- Set/get valid_extensions
----@param value fuse-archive.Set?
----@return fuse-archive.Set
-function State.valid_extensions(value)
-	if value then
-		set_state("global", "valid_extensions", value)
-	end
-	return get_state("global", "valid_extensions")
-end
-
---- Get/set mount_options
----@param value string[]?
----@return string[]
-function State.mount_options(value)
-	if value then
-		set_state("global", "mount_options", value)
-	end
-	return get_state("global", "mount_options")
-end
-
---- Get/set of_file cwd and tmp
----@param file string
----@param cwd string?
----@param tmp string?
----@return [string, string]
-function State.of_file(file, cwd, tmp)
-	if cwd and tmp then
-		set_state(file, "cwd", cwd)
-		set_state(file, "tmp", tmp)
-	end
-	return { cwd = get_state(file, "cwd"), tmp = get_state(file, "tmp") }
-end
+---@class fuse-archive.State
+---@field mount_root_dir string
+---@field smart_enter boolean
+---@field valid_extensions fuse-archive.Set
+---@field mount_options string[]
+local State = setmetatable(
+	{}, {
+		_global = { "mount_root_dir", "smart_enter", "valid_extensions", "mount_options" },
+		__index = function(t, k)
+			for _, v in pairs(getmetatable(t)._global) do
+				if k == v then
+					return get_state("global", k)
+				end
+			end
+			---@type fuse-archive.OpenedFile
+			return { cwd = get_state(k, "cwd"), tmp = get_state(k, "tmp") }
+		end,
+		---@param v fuse-archive.OpenedFile
+		__newindex = function(t, k, v)
+			for _, v2 in pairs(getmetatable(t)._global) do
+				if k == v2 then
+					set_state("global", k, v)
+					return
+				end
+			end
+			set_state(k, "cwd", v.cwd)
+			set_state(k, "tmp", v.tmp)
+		end
+	})
 
 --- Escapes special characters of Lua Pattern
 ---@param str string
@@ -210,7 +187,7 @@ end
 local is_mount_point = ya.sync(function(state)
 	local dir = cx.active.current.cwd.name
 	local cwd = tostring(cx.active.current.cwd)
-	local match_pattern = "^" .. is_literal_string(State.mount_root_dir()) .. "/[^/]+%.tmp%.[^/]+$"
+	local match_pattern = "^" .. is_literal_string(State.mount_root_dir) .. "/[^/]+%.tmp%.[^/]+$"
 
 	for archive, _ in pairs(state) do
 		if archive == dir and string.match(cwd, match_pattern) then
@@ -243,7 +220,7 @@ end)
 --- Smart enter implementation
 ---@param is_dir boolean
 local function enter(is_dir)
-	if not State.smart_enter() or is_dir then
+	if not State.smart_enter or is_dir then
 		ya.emit("enter", {})
 	else
 		ya.emit("open", { hovered = true })
@@ -283,7 +260,7 @@ end
 
 ---@type fun()
 local redirect_mounted_tab_to_cwd = ya.sync(function(state, _)
-	local match_pattern = "^" .. is_literal_string(State.mount_root_dir()) .. "/[^/]+%.tmp%.[^/]+$"
+	local match_pattern = "^" .. is_literal_string(State.mount_root_dir) .. "/[^/]+%.tmp%.[^/]+$"
 
 	for _, tab in ipairs(cx.tabs) do
 		local dir = tab.current.cwd.name
@@ -426,7 +403,7 @@ end
 
 local function unmount_on_quit()
 	redirect_mounted_tab_to_cwd()
-	local mount_root_dir = State.mount_root_dir()
+	local mount_root_dir = State.mount_root_dir
 	local unmount_script = os.getenv("HOME") .. "/.config/yazi/plugins/fuse-archive.yazi/assets/unmount_on_quit.sh"
 	-- FIX: doesn't unmount archive if CWD is inside it's mount point
 	Command(ya.quote(unmount_script)):arg(ya.quote(mount_root_dir)):spawn()
@@ -434,20 +411,19 @@ end
 
 local function setup(_, opts)
 	opts = opts or {}
-	State.mount_root_dir(
-		tostring(Url(opts.mount_root_dir
-			and type(opts.mount_root_dir) == "string"
-			and path_remove_trailing_slash(opts.mount_root_dir)
-			or "/tmp"):join(string.format("yazi.%i/fuse-archive", ya.uid())))
-	)
+	State.mount_root_dir =
+			tostring(Url(opts.mount_root_dir
+				and type(opts.mount_root_dir) == "string"
+				and path_remove_trailing_slash(opts.mount_root_dir)
+				or "/tmp"):join(string.format("yazi.%i/fuse-archive", ya.uid())))
 
-	local ok, err = fs.create("dir_all", Url(State.mount_root_dir()))
+	local ok, err = fs.create("dir_all", Url(State.mount_root_dir))
 	if not ok then
-		Log.error("Cannot create mount point %s, error: %s", State.mount_root_dir(), err)
+		Log.error("Cannot create mount point %s, error: %s", State.mount_root_dir, err)
 		return
 	end
 
-	State.smart_enter(opts.smart_enter or false)
+	State.smart_enter = opts.smart_enter or false
 	local mount_options = {}
 	if opts and opts.mount_options then
 		if type(opts.mount_options) == "string" then
@@ -456,7 +432,7 @@ local function setup(_, opts)
 			error("mount_options option in setup() must be a string separated by space or comma")
 		end
 	end
-	State.mount_options(mount_options)
+	State.mount_options = mount_options
 
 	-- stylua: ignore
 	local ORIGINAL_SUPPORTED_EXTENSIONS = {
@@ -498,7 +474,7 @@ local function setup(_, opts)
 			error("excluded_extensions option in setup() must be a table of string")
 		end
 	end
-	State.valid_extensions(SET_ALLOWED_EXTENSIONS)
+	State.valid_extensions = SET_ALLOWED_EXTENSIONS
 
 	-- trigger unmount on quit
 	ps.sub("key-quit", function(args)
@@ -531,7 +507,7 @@ return {
 			if hovered_url == nil then
 				return
 			end
-			if is_dir or is_dir == nil or (is_dir == false and not State.valid_extensions()[hovered_url.ext]) then
+			if is_dir or is_dir == nil or (is_dir == false and not State.valid_extensions[hovered_url.ext]) then
 				enter(is_dir or false)
 				return
 			end
@@ -543,16 +519,18 @@ return {
 			end
 
 			local tmp_fname = hovered_url.name .. ".tmp." .. ya.hash(hovered_url_raw)
-			local tmp_file_url = Url(State.mount_root_dir()):join(tmp_fname)
+			local tmp_file_url = Url(State.mount_root_dir):join(tmp_fname)
 
 			if tmp_file_url then
 				local success = mount_fuse({
 					archive_path = hovered_url,
 					fuse_mount_point = tmp_file_url,
-					mount_options = State.mount_options(),
+					mount_options = State.mount_options,
 				})
 				if success then
-					State.of_file(tmp_fname, tostring(current_dir()), tostring(tmp_file_url))
+					---@type fuse-archive.OpenedFile
+					local value = { cwd = tostring(current_dir()), tmp = tostring(tmp_file_url) }
+					State[tmp_fname] = value
 					ya.emit("cd", { tostring(tmp_file_url), raw = true })
 				end
 			end
@@ -563,7 +541,7 @@ return {
 				return
 			end
 			local file = current_dir_name()
-			ya.emit("cd", { State.of_file(file).cwd, raw = true })
+			ya.emit("cd", { State[file].cwd, raw = true })
 			return
 		elseif action == "unmount" then
 			unmount_on_quit()
